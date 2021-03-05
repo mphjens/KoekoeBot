@@ -13,6 +13,13 @@ using System.Threading.Tasks;
 
 namespace KoekoeBot
 {
+
+    class SavedGuildData
+    {
+        public ulong[] channelIds;
+        public AlarmData[] alarms;
+    }
+
     class KoekoeController
     {
         //Guild id -> ChannelHandler
@@ -46,13 +53,26 @@ namespace KoekoeBot
             if (File.Exists(guilddata_path))
             {
                 string json = File.ReadAllText(guilddata_path).ToString();
-                ulong[] channelids = JsonConvert.DeserializeObject<ulong[]>(json);
-                if (channelids != null)
+                var dataObj = JsonConvert.DeserializeObject< SavedGuildData>(json);
+                //Restore registered channels
+                if (dataObj.channelIds != null)
                 {
-                    foreach (ulong channelid in channelids)
+                    foreach (ulong channelid in dataObj.channelIds)
                     {
                         DiscordChannel channel = e.Guild.GetChannel(channelid);
-                        handler.AddChannel(channel);
+                        
+                        if(channel != null)
+                            handler.AddChannel(channel, false);
+                    }
+                }
+
+                //Restore alarms
+                if (dataObj.alarms != null)
+                {
+                    foreach (AlarmData alarm in dataObj.alarms)
+                    {
+                        if (alarm != null)
+                            handler.AddAlarm(alarm.AlarmDate, alarm.AlarmName, alarm.userId, false);
                     }
                 }
 

@@ -7,8 +7,10 @@ namespace KoekoeBot
 
     using System;
     using System.Diagnostics;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Reflection.Metadata;
     using System.Runtime.InteropServices;
     using System.Threading.Tasks;
     using DSharpPlus.CommandsNext;
@@ -77,6 +79,7 @@ namespace KoekoeBot
                 string channelstext = String.Join("`, `", handler.GetRegisteredChannelNames());
 
                 await ctx.RespondAsync($"Currently registered to: `{channelstext}`");
+                return;
             }
 
 
@@ -84,8 +87,54 @@ namespace KoekoeBot
         }
 
 
+        [Command("listalarms"), Description("lists all registered alarms.")]
+        public async Task ListAlarm(CommandContext ctx, DiscordChannel channel = null)
+        {
+
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Channel.Guild, false);
+            if (handler != null)
+            {
+                List<AlarmData> alarms = handler.GetAlarms();
+                string[] alarmtexts = new string[alarms.Count];
+                for(int i = 0; i < alarmtexts.Length; i++)
+                {
+                    DiscordMember member = await ctx.Guild.GetMemberAsync(alarms[i].userId);
+                    alarmtexts[i] = $"{member.Username}: {alarms[i].AlarmDate.ToShortTimeString()} ({alarms[i].AlarmName})";
+                }
+                string alarmstext = String.Join("`\n`", alarmtexts);
+
+                await ctx.RespondAsync($"Currently Alarms:\n{alarmstext}");
+                return;
+            }
+
+
+            await ctx.RespondAsync($"Currently not registered to any channel, use `!kk register` while in a voice channel to add it.");
+        }
+
+        [Command("cancelalarm"), Description("cancels an alarm by name (you can only cancel your own alarms)")]
+        public async Task CancelAlarm(CommandContext ctx, string alarmname)
+        {
+
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
+            List<AlarmData> alarms = handler.GetAlarms();
+            for(int i = 0; i < alarms.Count; i++)
+            {
+                if(alarms[i].AlarmName == alarmname)
+                {
+                    alarms.RemoveAt(i);
+                    handler.SaveGuildData();
+                    await ctx.RespondAsync($"Canceled alarm `{alarmname}`");
+
+                    return;
+                }
+            }
+
+            await ctx.RespondAsync($"Couldn't find alarm `{alarmname}`");
+        }
+
+
         [Command("setalarm"), Description("set an alarm for your current voicechannel")]
-        public async Task SetAlarm(CommandContext ctx, [RemainingText, Description("Alarm time ex 4:20 or 15:34")] string datestring)
+        public async Task SetAlarm(CommandContext ctx, string alarmname, [RemainingText, Description("Alarm time ex 4:20 or 15:34")] string datestring)
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
@@ -102,24 +151,27 @@ namespace KoekoeBot
                 int parsedHours, parsedMinutes;
                 if(int.TryParse(datestringComps[0], out parsedHours) && int.TryParse(datestringComps[1], out parsedMinutes))
                 {
-                    int hourdiff = (parsedHours - DateTime.Now.Hour) % 24;
-                    if (hourdiff < 0)
-                        hourdiff += 24;
+                    if(parsedHours > 0 && parsedHours < 24 && parsedMinutes > 0 && parsedMinutes < 60)
+                    {
+                        int hourdiff = (parsedHours - DateTime.Now.Hour) % 24;
+                        if (hourdiff < 0)
+                            hourdiff += 24;
 
-                    int mindiff = (parsedMinutes - DateTime.Now.Minute) % 60;
-                    DateTime dt = DateTime.Now.AddHours(hourdiff).AddMinutes(mindiff);
+                        int mindiff = (parsedMinutes - DateTime.Now.Minute) % 60;
+                        DateTime dt = DateTime.Now.AddHours(hourdiff).AddMinutes(mindiff).AddSeconds(-DateTime.Now.Second);
 
-                    GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, vstat.Channel.Guild, true);
-                    
-                    //TODO: Add alarm to handler here
+                        GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, vstat.Channel.Guild, true);
 
-                    if (!handler.IsRunning) //If the handler isn't running for some reason start it TODO: remove these, or implement handler sleep 
-                        handler.Execute(); //Will run async
+                        handler.AddAlarm(dt, alarmname, ctx.User.Id);
+
+                        if (!handler.IsRunning) //If the handler isn't running for some reason start it TODO: remove these, or implement handler sleep 
+                            handler.Execute(); //Will run async
+                    }
                 }
                 
             }
 
-            await ctx.RespondAsync($"Registered alarm to `{vstat.Channel.Name}`");
+            await ctx.RespondAsync($"Registered alarm `{alarmname}` to `{ctx.User.Username}`");
         }
 
 
@@ -136,6 +188,14 @@ namespace KoekoeBot
                 await ctx.RespondAsync($"Done announcing `{filename}`");
             }
             
+        }
+
+        [Command("cleardata"), Description("clear all data from this guild")]
+        public async Task ClearData(CommandContext ctx)
+        {
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
+            handler.ClearGuildData();
+            await ctx.RespondAsync($"Cleared all data for this guild");
         }
 
         //Used for debugging the voicenext and ffmpeg stuff

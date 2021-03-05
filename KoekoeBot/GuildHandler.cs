@@ -10,6 +10,8 @@ using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
+using DSPlus.Examples;
 
 namespace KoekoeBot
 {
@@ -17,7 +19,8 @@ namespace KoekoeBot
     {
         public string AlarmName;
         public DateTime AlarmDate;
-        public bool recurring;
+        public ulong userId; //The user that set this alarm, we will try to find this user in the guild's channels.
+        public bool recurring; //Not implemented yet
     }
 
     public class GuildHandler
@@ -60,16 +63,28 @@ namespace KoekoeBot
                 //Debug: Chime twice every minute
                 //await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2);
 
+                int alarmCountStart = alarms.Count;
                 //Check if we need to trigger an alarm
-                foreach (AlarmData alarm in alarms)
+                for (int i = 0; i < alarms.Count; i++)
                 {
+                    AlarmData alarm = alarms[i];
+                    
                     if (alarm.recurring && alarm.AlarmDate.DayOfWeek != now.DayOfWeek)
                         continue;
                     if (alarm.AlarmDate.Hour == now.Hour && alarm.AlarmDate.Minute == now.Minute)
                     {
-                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2);
-                    }
+                        //Announce in the channel where the user that set this alarm currently is.
+                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2, Channels.Where(x=>x.Users.Where(x=>x.Id == alarm.userId).Count() > 0).ToList());
+                        alarms.RemoveAt(i); //Todo: implement recurring alarms
+                        i--;
 
+                        
+                    }
+                }
+
+                if(alarms.Count != alarmCountStart)
+                {
+                    SaveGuildData(); //save the alarms list if it has changed
                 }
 
                 //Special case for 420 (blaze it)
@@ -99,15 +114,20 @@ namespace KoekoeBot
                     nextBonusClip = DateTime.Now.AddHours(2).AddMinutes((int)(rnd.NextDouble() * 60f));
                 }
 
-                //Calculate the number of miliseconds until a new minute on the system clock
+                //Calculate the number of miliseconds until a new minute on the system clock (fix? add one second to account for task.delay() inaccuracy)
                 double millisToNextMinute = (double)((60 * 1000) - DateTime.Now.TimeOfDay.TotalMilliseconds % (60 * 1000));
-                await Task.Delay((int)millisToNextMinute);
+                await Task.Delay((int)millisToNextMinute + 1000);
             }
 
             IsRunning = false;
         }
-        public async Task AnnounceFile(string audio_path, int loopcount = 1)
+
+        //Joins, plays audio file and leaves again. for all registered channels in this guild
+        public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
+            if (channels == null)
+                channels = Channels;
+
             foreach (DiscordChannel Channel in Channels)
             {
                 if (Channel.Users.Count() == 0)
@@ -154,7 +174,7 @@ namespace KoekoeBot
 
                     };
 
-                    System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
+                    Client.Logger.LogInformation(Program.BotEventId, $"Will run {psi.FileName} as {psi.Arguments}");
 
                     for (int i = 0; i < loopcount; i++)
                     {
@@ -177,36 +197,42 @@ namespace KoekoeBot
             }
         }
 
-        public void AddChannel(DiscordChannel channel)
+        public void AddChannel(DiscordChannel channel, bool autosave = true)
         {
             if (!Channels.Contains(channel))
             {
                 Channels.Add(channel);
 
-                //Update saved data
-                string data_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{this.Guild.Id}.json");
-                if (!File.Exists(data_path))
-                {
-                    File.Create(data_path).Close();
-                }
-                File.WriteAllText(data_path, JsonConvert.SerializeObject(this.GetRegisteredChannelIds()));
-
-                //System.Console.WriteLine($"Added channel to list {channel.Name}");
+                if (autosave)
+                    this.SaveGuildData();
             }
+        }
+
+        public void AddAlarm(DateTime alarmdate, string alarmname, ulong userid, bool autosave = true)
+        {
+            AlarmData nAlarm = new AlarmData()
+            {
+                AlarmDate = alarmdate,
+                AlarmName = alarmname,
+                userId = userid
+            };
+
+            this.alarms.Add(nAlarm);
+
+            if (autosave)
+                this.SaveGuildData();
+        }
+
+        public List<AlarmData> GetAlarms()
+        {
+            return this.alarms;
         }
 
         public void RemoveChannel(DiscordChannel channel)
         {
             if (Channels.Remove(channel))
             {
-                //Update our data file
-                string data_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{this.Guild.Id}.json");
-                if (!File.Exists(data_path))
-                {
-                    File.Create(data_path).Close();
-                }
-                File.WriteAllText(data_path, JsonConvert.SerializeObject(this.GetRegisteredChannelIds()));
-
+                SaveGuildData();
             }
         }
 
@@ -220,12 +246,39 @@ namespace KoekoeBot
             return this.Channels.Select(x => x.Id).ToArray();
         }
 
+        public void SaveGuildData()
+        {
+            SavedGuildData data = new SavedGuildData();
+            data.alarms = this.alarms.ToArray();
+            data.channelIds = this.GetRegisteredChannelIds();
+
+            //Update saved data
+            string data_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{this.Guild.Id}.json");
+            if (!File.Exists(data_path))
+            {
+                File.Create(data_path).Close();
+            }
+            File.WriteAllText(data_path, JsonConvert.SerializeObject(data));
+        }
+
+        public void ClearGuildData()
+        {
+            this.alarms.Clear();
+            this.Channels.Clear();
+
+            //Delete saved data file
+            string data_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{this.Guild.Id}.json");
+            if (!File.Exists(data_path))
+            {
+                File.Delete(data_path);
+            }
+        }
 
         private string getFileNameForHour(int hour)
         {
             return Path.Combine(Environment.CurrentDirectory, "samples", $"{hour % 12}_uur.mp3");
         }
 
-        //Joins, plays audio file and leaves again. for all registered channels in this guild
+        
     }
 }
