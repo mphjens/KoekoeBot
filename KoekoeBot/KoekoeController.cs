@@ -39,7 +39,7 @@ namespace KoekoeBot
         }
 
         //Hooked up in program.cs
-        public static Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
+        public static async Task StartupGuildHandler(DiscordClient sender, GuildCreateEventArgs e)
         {
             // let's log the name of the guild that was just
             // sent to our client
@@ -79,13 +79,8 @@ namespace KoekoeBot
             }
 
             if (!handler.IsRunning) //Run the handler loop if it's not already started
-                handler.Execute(); //Will run async
+                await handler.Execute();
 
-
-            // since this method is not async, let's return
-            // a completed task, so that no additional work
-            // is done
-            return Task.CompletedTask;
         }
 
         public static GuildHandler GetGuildHandler(DiscordClient client, DiscordGuild guild, bool create=true)

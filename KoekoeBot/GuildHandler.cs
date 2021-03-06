@@ -62,6 +62,7 @@ namespace KoekoeBot
 
                 //Debug: Chime twice every minute
                 //await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2);
+                Client.Logger.LogDebug(Program.BotEventId, $"Guildhandler tick {Guild.Name}");
 
                 int alarmCountStart = alarms.Count;
                 //Check if we need to trigger an alarm
@@ -73,12 +74,11 @@ namespace KoekoeBot
                         continue;
                     if (alarm.AlarmDate.Hour == now.Hour && alarm.AlarmDate.Minute == now.Minute)
                     {
+                        Client.Logger.LogInformation(Program.BotEventId, $"Triggering alarm ${alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
                         //Announce in the channel where the user that set this alarm currently is.
                         await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2, Channels.Where(x=>x.Users.Where(x=>x.Id == alarm.userId).Count() > 0).ToList());
                         alarms.RemoveAt(i); //Todo: implement recurring alarms
                         i--;
-
-                        
                     }
                 }
 
@@ -95,6 +95,7 @@ namespace KoekoeBot
 
                 if (now.Minute == 0) //If we entered a new hour
                 {
+                    Client.Logger.LogInformation(Program.BotEventId, $"Guildhandler entered new hour");
                     await AnnounceFile(getFileNameForHour(now.Hour));
                 }
 
@@ -105,6 +106,7 @@ namespace KoekoeBot
                     Random rnd = new Random();
                     string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x=>x.StartsWith("extra_")).ToArray();
                     int clipIndex = (int)Math.Round((double)rnd.NextDouble() * (extraClipFiles.Length - 1));
+                    Client.Logger.LogDebug(Program.BotEventId, $"Selected {extraClipFiles[clipIndex]} as bonus clip");
 
                     if (nextBonusClip != DateTime.UnixEpoch)//Ignore the first time as this runs when the handler is started
                         await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", extraClipFiles[clipIndex]));
@@ -114,10 +116,13 @@ namespace KoekoeBot
                     nextBonusClip = DateTime.Now.AddHours(2).AddMinutes((int)(rnd.NextDouble() * 60f));
                 }
 
+                Client.Logger.LogDebug(Program.BotEventId, $"Guildhandler has ticked {Guild.Name}");
                 //Calculate the number of miliseconds until a new minute on the system clock (fix? add one second to account for task.delay() inaccuracy)
                 double millisToNextMinute = (double)((60 * 1000) - DateTime.Now.TimeOfDay.TotalMilliseconds % (60 * 1000));
                 await Task.Delay((int)millisToNextMinute + 1000);
             }
+
+            Client.Logger.LogWarning(Program.BotEventId, $"Guildhandler stopped {Guild.Name}");
 
             IsRunning = false;
         }
@@ -251,6 +256,7 @@ namespace KoekoeBot
             SavedGuildData data = new SavedGuildData();
             data.alarms = this.alarms.ToArray();
             data.channelIds = this.GetRegisteredChannelIds();
+            Client.Logger.LogInformation(Program.BotEventId, $"Saving guild data {Guild.Name}");
 
             //Update saved data
             string data_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{this.Guild.Id}.json");
@@ -259,6 +265,8 @@ namespace KoekoeBot
                 File.Create(data_path).Close();
             }
             File.WriteAllText(data_path, JsonConvert.SerializeObject(data));
+
+            Client.Logger.LogInformation(Program.BotEventId, $"Saved guild data to {data_path}");
         }
 
         public void ClearGuildData()

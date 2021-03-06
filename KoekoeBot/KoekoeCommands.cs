@@ -119,7 +119,7 @@ namespace KoekoeBot
             List<AlarmData> alarms = handler.GetAlarms();
             for(int i = 0; i < alarms.Count; i++)
             {
-                if(alarms[i].AlarmName == alarmname)
+                if(alarms[i].AlarmName == alarmname && alarms[i].userId == ctx.User.Id)
                 {
                     alarms.RemoveAt(i);
                     handler.SaveGuildData();

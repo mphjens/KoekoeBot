@@ -81,7 +81,7 @@ namespace DSPlus.Examples
             // next, let's hook some events, so we know
             // what's going on
             this.Client.Ready += this.Client_Ready;
-            this.Client.GuildAvailable += KoekoeController.Client_GuildAvailable;
+            this.Client.GuildAvailable += Client_GuildAvailable; ;
             this.Client.ClientErrored += this.Client_ClientError;
 
             // up next, let's set up our commands
@@ -119,6 +119,13 @@ namespace DSPlus.Examples
 
             // and this is to prevent premature quitting
             await Task.Delay(-1);
+        }
+
+        private Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
+        {
+            KoekoeController.StartupGuildHandler(sender, e);
+
+            return Task.CompletedTask;
         }
 
         private Task Client_Ready(DiscordClient sender, ReadyEventArgs e)
