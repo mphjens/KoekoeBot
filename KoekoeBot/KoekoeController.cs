@@ -39,11 +39,11 @@ namespace KoekoeBot
         }
 
         //Hooked up in program.cs
-        public static async Task StartupGuildHandler(DiscordClient sender, GuildCreateEventArgs e)
+        public static void StartupGuildHandler(DiscordClient sender, GuildCreateEventArgs e)
         {
             // let's log the name of the guild that was just
             // sent to our client
-            sender.Logger.LogInformation(Program.BotEventId, $"Guild available: {e.Guild.Name}");
+            //sender.Logger.LogInformation(Program.BotEventId, $"Guild available: {e.Guild.Name}");
 
             //Create or get the handler for this guild
             GuildHandler handler = KoekoeController.GetGuildHandler(sender, e.Guild);
@@ -79,7 +79,7 @@ namespace KoekoeBot
             }
 
             if (!handler.IsRunning) //Run the handler loop if it's not already started
-                await handler.Execute();
+                handler.Execute();
 
         }
 
