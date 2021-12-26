@@ -45,6 +45,9 @@ namespace KoekoeBot
             // sent to our client
             //sender.Logger.LogInformation(Program.BotEventId, $"Guild available: {e.Guild.Name}");
 
+            Console.WriteLine($"Starting guild handler for {e.Guild.Name}");
+
+
             //Create or get the handler for this guild
             GuildHandler handler = KoekoeController.GetGuildHandler(sender, e.Guild);
 
