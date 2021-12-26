@@ -28,6 +28,12 @@ namespace KoekoeBot
 
         private List<DiscordChannel> Channels;
         public DiscordGuild Guild;
+
+        // The minimum amount of time between playing bonus clips in minutes
+        public int minBonusInterval = 60;
+        // The max amount of minutes to be added to minBonusInterval
+        public int variableBonusInterval = 30;
+
         public bool IsRunning { get; private set; }
         private DiscordClient Client;
         private bool ShouldRun;
@@ -35,12 +41,14 @@ namespace KoekoeBot
         List<AlarmData> alarms;
 
         DateTime nextBonusClip = DateTime.UnixEpoch;
+        Random rnd;
 
         public GuildHandler(DiscordClient client, DiscordGuild guild)
         {
             this.Channels = new List<DiscordChannel>();
             this.Client = client;
             this.Guild = guild;
+            this.rnd = new Random();
 
             alarms = new List<AlarmData>();
         }
@@ -103,18 +111,16 @@ namespace KoekoeBot
                 if (nextBonusClip - now <= TimeSpan.Zero)
                 {
                     //Play bonus clip
-                    Random rnd = new Random();
-
                     string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x=>x.Contains("extra_")).ToArray();
-                    int clipIndex = (int)Math.Round((double)rnd.NextDouble() * (extraClipFiles.Length - 1));
-                    System.Console.WriteLine($"Selected {extraClipFiles[clipIndex]} as bonus clip");
+                    int clipIndex = rnd.Next(extraClipFiles.Length);
+                    System.Console.WriteLine($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name}");
 
                     if (nextBonusClip != DateTime.UnixEpoch)//Ignore the first time as this runs when the handler is started
                         await AnnounceFile(extraClipFiles[clipIndex]);
 
 
-                    //Determine when we next will play a bonusclip (after 2h and a random amount of minutes)
-                    nextBonusClip = DateTime.Now.AddHours(2).AddMinutes((int)(rnd.NextDouble() * 60f));
+                    //Determine when we next will play a bonusclip (from minBonusInterval up to minBonusInterval + variableBonusInterval minutes)
+                    nextBonusClip = DateTime.Now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
                 }
 
                 //System.Console.WriteLine($"Guildhandler has ticked {Guild.Name}");
@@ -137,7 +143,10 @@ namespace KoekoeBot
             foreach (DiscordChannel Channel in Channels)
             {
                 if (Channel.Users.Count() == 0)
+                {
+                    System.Console.WriteLine($"Will not be playing {audio_path} in {Channel.Guild.Name}/{Channel.Name} (no users online)");
                     continue; //skip empty channels
+                }
 
                 // check whether VNext is enabled
                 var vnext = Client.GetVoiceNext();
@@ -180,7 +189,8 @@ namespace KoekoeBot
 
                     };
 
-                    System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
+                    System.Console.WriteLine($"Playing {audio_path} in {Channel.Guild.Name}/{Channel.Name}");
+                    //System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
 
                     for (int i = 0; i < loopcount; i++)
                     {
