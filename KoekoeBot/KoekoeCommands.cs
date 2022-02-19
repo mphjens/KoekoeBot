@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -208,6 +208,11 @@ namespace KoekoeBot
             {
                 await ctx.RespondAsync("You are not in a voice channel.");
                 return;
+            }
+
+            if (!File.Exists(filename))
+            {
+                System.Console.WriteLine($"Will not be playing {filename} (file not found)");
             }
 
             DiscordChannel Channel = vstat.Channel;
