@@ -172,6 +172,8 @@ namespace KoekoeBot
                 // connect
                 vnc = await vnext.ConnectAsync(Channel);
 
+                try
+                {
                 // wait for current playback to finish
                 while (vnc.IsPlaying)
                 {
