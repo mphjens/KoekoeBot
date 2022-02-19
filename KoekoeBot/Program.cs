@@ -46,8 +46,6 @@ namespace DSPlus.Examples
 
         public static void Main(string[] args)
         {
-
-            
             // since we cannot make the entry method asynchronous,
             // let's pass the execution to asynchronous code
             var prog = new Program();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -7,17 +7,13 @@ namespace KoekoeBot
 
     using System;
     using System.Diagnostics;
-    using System.Globalization;
     using System.IO;
-    using System.Linq;
-    using System.Reflection.Metadata;
     using System.Runtime.InteropServices;
     using System.Threading.Tasks;
     using DSharpPlus.CommandsNext;
     using DSharpPlus.CommandsNext.Attributes;
     using DSharpPlus.Entities;
     using DSharpPlus.VoiceNext;
-    using Newtonsoft.Json;
 
     class KoekoeCommands : BaseCommandModule
     {

@@ -1,4 +1,4 @@
-using DSharpPlus;
+﻿using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.VoiceNext;
 using System;
@@ -77,20 +77,20 @@ namespace KoekoeBot
                 for (int i = 0; i < alarms.Count; i++)
                 {
                     AlarmData alarm = alarms[i];
-                    
+
                     if (alarm.recurring && alarm.AlarmDate.DayOfWeek != now.DayOfWeek)
                         continue;
                     if (alarm.AlarmDate.Hour == now.Hour && alarm.AlarmDate.Minute == now.Minute)
                     {
                         System.Console.WriteLine($"Triggering alarm ${alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
                         //Announce in the channel where the user that set this alarm currently is.
-                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2, Channels.Where(x=>x.Users.Where(x=>x.Id == alarm.userId).Count() > 0).ToList());
+                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2, Channels.Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList());
                         alarms.RemoveAt(i); //Todo: implement recurring alarms
                         i--;
                     }
                 }
 
-                if(alarms.Count != alarmCountStart)
+                if (alarms.Count != alarmCountStart)
                 {
                     SaveGuildData(); //save the alarms list if it has changed
                 }
@@ -100,7 +100,7 @@ namespace KoekoeBot
                 {
                     await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "420.mp3"));
                 }
-                
+
                 if (now.Minute == 0) //If we entered a new hour
                 {
                     System.Console.WriteLine($"Guildhandler entered new hour");
@@ -111,16 +111,15 @@ namespace KoekoeBot
                 if (nextBonusClip - now <= TimeSpan.Zero)
                 {
                     //Play bonus clip
-                    string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x=>x.Contains("extra_")).ToArray();
+                    string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x => x.Contains("extra_")).ToArray();
                     int clipIndex = rnd.Next(extraClipFiles.Length);
-                    System.Console.WriteLine($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name}");
 
                     if (nextBonusClip != DateTime.UnixEpoch)//Ignore the first time as this runs when the handler is started
                         await AnnounceFile(extraClipFiles[clipIndex]);
 
-
                     //Determine when we next will play a bonusclip (from minBonusInterval up to minBonusInterval + variableBonusInterval minutes)
                     nextBonusClip = DateTime.Now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
+                    System.Console.WriteLine($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name} which will be played at {nextBonusClip.ToShortTimeString()}");
                 }
 
                 //System.Console.WriteLine($"Guildhandler has ticked {Guild.Name}");
@@ -174,15 +173,12 @@ namespace KoekoeBot
 
                 try
                 {
-                // wait for current playback to finish
-                while (vnc.IsPlaying)
-                {
-                    await vnc.WaitForPlaybackFinishAsync();
-                }
+                    // wait for current playback to finish
+                    while (vnc.IsPlaying)
+                    {
+                        await vnc.WaitForPlaybackFinishAsync();
+                    }
 
-
-                try
-                {
                     await vnc.SendSpeakingAsync(true);
 
                     var psi = new ProcessStartInfo
@@ -308,6 +304,6 @@ namespace KoekoeBot
             return hourClipFiles[clipIndex];
         }
 
-        
+
     }
 }
