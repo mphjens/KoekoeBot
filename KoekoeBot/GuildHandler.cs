@@ -300,7 +300,10 @@ namespace KoekoeBot
 
         private string getFileNameForHour(int hour)
         {
-            return Path.Combine(Environment.CurrentDirectory, "samples", $"{hour % 12}_uur.mp3");
+            string[] hourClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x => x.Contains($"{hour % 12}_uur") && x.EndsWith(".mp3")).ToArray();
+            int clipIndex = rnd.Next(hourClipFiles.Length);
+
+            return hourClipFiles[clipIndex];
         }
 
         
