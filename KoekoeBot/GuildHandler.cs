@@ -1,4 +1,4 @@
-﻿using DSharpPlus;
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.VoiceNext;
 using System;
@@ -139,6 +139,11 @@ namespace KoekoeBot
         {
             if (channels == null)
                 channels = Channels;
+
+            if (!File.Exists(audio_path))
+            {
+                System.Console.WriteLine($"Will not be playing {audio_path} (file not found)");
+            }
 
             foreach (DiscordChannel Channel in Channels)
             {
