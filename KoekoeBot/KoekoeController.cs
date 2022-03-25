@@ -14,10 +14,11 @@ using System.Threading.Tasks;
 namespace KoekoeBot
 {
 
-    class SavedGuildData
+    public class SavedGuildData
     {
         public ulong[] channelIds;
         public AlarmData[] alarms;
+        public List<string> samples;
     }
 
     class KoekoeController
@@ -57,6 +58,9 @@ namespace KoekoeBot
             {
                 string json = File.ReadAllText(guilddata_path).ToString();
                 var dataObj = JsonConvert.DeserializeObject< SavedGuildData>(json);
+
+                handler.SetGuildData(dataObj);
+
                 //Restore registered channels
                 if (dataObj.channelIds != null)
                 {
@@ -78,8 +82,9 @@ namespace KoekoeBot
                             handler.AddAlarm(alarm.AlarmDate, alarm.AlarmName, alarm.userId, false);
                     }
                 }
-
             }
+
+            handler.UpdateSamplelist();
 
             if (!handler.IsRunning) //Run the handler loop if it's not already started
                 handler.Execute();
@@ -97,6 +102,7 @@ namespace KoekoeBot
             {
                 GuildHandler nHandler = new GuildHandler(client, guild);
                 _instances.Add(guild.Id, nHandler);
+                nHandler.SetGuildData(new SavedGuildData());
                 return nHandler;
             }
 

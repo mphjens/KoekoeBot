@@ -6,6 +6,7 @@ namespace KoekoeBot
 {
 
     using System;
+    using System.Linq;
     using System.Diagnostics;
     using System.IO;
     using System.Runtime.InteropServices;
@@ -31,13 +32,13 @@ namespace KoekoeBot
             }
 
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, vstat.Channel.Guild, true);
-            if(handler != null)
+            if (handler != null)
                 handler.AddChannel(vstat.Channel); //Could throw access violation because we run the handlers async, this needs fixing
 
             if (!handler.IsRunning)
                 handler.Execute(); //Will run async
 
-            
+
             await ctx.RespondAsync($"Registered to `{vstat.Channel.Name}`");
         }
 
@@ -70,7 +71,7 @@ namespace KoekoeBot
         {
 
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Channel.Guild, false);
-            if(handler != null)
+            if (handler != null)
             {
                 string channelstext = String.Join("`, `", handler.GetRegisteredChannelNames());
 
@@ -92,7 +93,7 @@ namespace KoekoeBot
             {
                 List<AlarmData> alarms = handler.GetAlarms();
                 string[] alarmtexts = new string[alarms.Count];
-                for(int i = 0; i < alarmtexts.Length; i++)
+                for (int i = 0; i < alarmtexts.Length; i++)
                 {
                     DiscordMember member = await ctx.Guild.GetMemberAsync(alarms[i].userId);
                     alarmtexts[i] = $"{member.Username}: {alarms[i].AlarmDate.ToShortTimeString()} ({alarms[i].AlarmName})";
@@ -113,9 +114,9 @@ namespace KoekoeBot
 
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<AlarmData> alarms = handler.GetAlarms();
-            for(int i = 0; i < alarms.Count; i++)
+            for (int i = 0; i < alarms.Count; i++)
             {
-                if(alarms[i].AlarmName == alarmname && alarms[i].userId == ctx.User.Id)
+                if (alarms[i].AlarmName == alarmname && alarms[i].userId == ctx.User.Id)
                 {
                     alarms.RemoveAt(i);
                     handler.SaveGuildData();
@@ -142,12 +143,12 @@ namespace KoekoeBot
             }
 
             string[] datestringComps = datestring.Split(':');
-            if(datestringComps.Length == 2)
+            if (datestringComps.Length == 2)
             {
                 int parsedHours, parsedMinutes;
-                if(int.TryParse(datestringComps[0], out parsedHours) && int.TryParse(datestringComps[1], out parsedMinutes))
+                if (int.TryParse(datestringComps[0], out parsedHours) && int.TryParse(datestringComps[1], out parsedMinutes))
                 {
-                    if(parsedHours > 0 && parsedHours < 24 && parsedMinutes > 0 && parsedMinutes < 60)
+                    if (parsedHours > 0 && parsedHours < 24 && parsedMinutes > 0 && parsedMinutes < 60)
                     {
                         int hourdiff = (parsedHours - DateTime.Now.Hour) % 24;
                         if (hourdiff < 0)
@@ -164,7 +165,7 @@ namespace KoekoeBot
                             handler.Execute(); //Will run async
                     }
                 }
-                
+
             }
 
             await ctx.RespondAsync($"Registered alarm `{alarmname}` to `{ctx.User.Username}`");
@@ -177,13 +178,13 @@ namespace KoekoeBot
         public async Task Announce(CommandContext ctx, [RemainingText, Description("path to the file to play.")] string filename)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-            if(handler != null)
+            if (handler != null)
             {
                 await ctx.RespondAsync($"Will announce `{filename}`");
                 await handler.AnnounceFile(filename);
                 await ctx.RespondAsync($"Done announcing `{filename}`");
             }
-            
+
         }
 
         [Command("cleardata"), Description("clear all data from this guild")]
@@ -192,6 +193,74 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
             handler.ClearGuildData();
             await ctx.RespondAsync($"Cleared all data for this guild");
+        }
+
+        [Command("samples"), Description("List available samples")]
+        public async Task Samples(CommandContext ctx)
+        {
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
+            List<string> samples = handler.GetGuildData().samples;
+
+            
+            DiscordEmbedBuilder builder = new DiscordEmbedBuilder();
+            builder.Title = "Available Samples";
+            builder.Description = "use !kk p {number} to play the sample.";
+            for(int i = 0; i < samples.Count; i++){
+                string filename = samples.ElementAt(i);
+                builder.AddField($"{i}. {Path.GetFileName(filename).Replace('_', ' ').Replace(".mp3", "").Replace("extra ", "")}", $"{Path.GetRelativePath(Environment.CurrentDirectory, filename)}");
+                if((i + 1) % 25 == 0) //There's a limit of 25 fields per embed
+                {
+                    await ctx.RespondAsync(builder.Build());
+                    builder.Title = "";
+                    builder.Description = "";
+                    builder.ClearFields();
+                }
+            }
+
+            //Send remaining
+            if(builder.Fields.Count > 0)
+                await ctx.RespondAsync(builder.Build());
+        }
+
+        [Command("updatesamples"), Description("Update the list of available samples")]
+        public async Task UpdateSamples(CommandContext ctx){
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
+            handler.UpdateSamplelist();
+            await ctx.RespondAsync("Sample list updated");
+        }
+
+        [Command("p"), Description("Shortcut to play samples, use !kk samples command to see a list of available samples")]
+        public async Task p(CommandContext ctx, [RemainingText, Description("sample number from !kk samples command")] string sampleNumStr)
+        {
+            // get member's voice state
+            var vstat = ctx.Member?.VoiceState;
+            if (vstat?.Channel == null)
+            {
+                await ctx.RespondAsync("You are not in a voice channel.");
+                return;
+            }
+
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
+            
+            int sampleNum = -1;
+            int.TryParse(sampleNumStr, out sampleNum);
+
+            if(sampleNum < 0 || sampleNum > handler.GetGuildData().samples.Count - 1)
+            {
+                await ctx.RespondAsync("Invalid sample number");
+                return;
+            }
+
+            string filename = handler.GetGuildData().samples.ElementAt(sampleNum);
+            if (!File.Exists(filename))
+            {
+                await ctx.RespondAsync($"Will not be playing {filename} (file not found)");
+                System.Console.WriteLine($"Will not be playing {filename} (file not found)");
+            }
+
+            List<DiscordChannel> channels = new List<DiscordChannel>();
+            channels.Add(ctx.Channel);
+            await handler.AnnounceFile(filename, 1, channels);
         }
 
         //Used for debugging the voicenext and ffmpeg stuff
@@ -208,6 +277,7 @@ namespace KoekoeBot
 
             if (!File.Exists(filename))
             {
+                await ctx.RespondAsync($"Will not be playing {filename} (file not found)");
                 System.Console.WriteLine($"Will not be playing {filename} (file not found)");
             }
 
@@ -264,7 +334,7 @@ namespace KoekoeBot
                 await ffout.CopyToAsync(txStream);
                 await txStream.FlushAsync();
                 await vnc.WaitForPlaybackFinishAsync();
-                
+
             }
             catch (Exception ex) { exc = ex; }
             finally

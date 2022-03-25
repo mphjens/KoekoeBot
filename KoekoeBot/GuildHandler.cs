@@ -37,6 +37,8 @@ namespace KoekoeBot
         public bool IsRunning { get; private set; }
         private DiscordClient Client;
         private bool ShouldRun;
+        
+        private SavedGuildData guildData;
 
         List<AlarmData> alarms;
 
@@ -49,13 +51,39 @@ namespace KoekoeBot
             this.Client = client;
             this.Guild = guild;
             this.rnd = new Random();
-
+            
             alarms = new List<AlarmData>();
         }
 
         public void Stop()
         {
             ShouldRun = false;
+        }
+
+        public void SetGuildData(SavedGuildData data){
+            this.guildData = data;
+        }
+        public void UpdateSamplelist()
+        {
+            //Create sample list
+            var data = this.guildData;
+            data.samples = data.samples != null ? data.samples : new List<string>();
+            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x => x.EndsWith(".mp3")).ToArray();
+            
+            //todo: first use slots where the sample file does not exsist anymore.
+            //      this way the indecies of exsisting samples don't change when
+            //      samples are removed from the list. For now appending new ones
+            //      works just fine.
+            foreach (string sample in samplefiles)
+            {
+                //Add new samplefiles
+                if (!guildData.samples.Contains(sample))
+                {
+                    guildData.samples.Add(sample);
+                }
+            }
+
+            this.SaveGuildData();
         }
 
         public async Task Execute()
@@ -67,10 +95,6 @@ namespace KoekoeBot
             while (ShouldRun)
             {
                 DateTime now = DateTime.Now;
-
-                //Debug: Chime twice every minute
-                //await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2);
-                //System.Console.WriteLine($"Guildhandler tick {Guild.Name} at T: {now.ToShortTimeString()}");
 
                 int alarmCountStart = alarms.Count;
                 //Check if we need to trigger an alarm
@@ -125,6 +149,7 @@ namespace KoekoeBot
                 //System.Console.WriteLine($"Guildhandler has ticked {Guild.Name}");
                 //Calculate the number of miliseconds until a new minute on the system clock (fix? add one second to account for task.delay() inaccuracy)
                 double millisToNextMinute = (double)((60 * 1000) - DateTime.Now.TimeOfDay.TotalMilliseconds % (60 * 1000));
+                
                 await Task.Delay((int)millisToNextMinute + 1000);
             }
 
@@ -142,6 +167,7 @@ namespace KoekoeBot
             if (!File.Exists(audio_path))
             {
                 System.Console.WriteLine($"Will not be playing {audio_path} (file not found)");
+                return;
             }
 
             foreach (DiscordChannel Channel in Channels)
@@ -181,6 +207,8 @@ namespace KoekoeBot
 
                     await vnc.SendSpeakingAsync(true);
 
+                    await Task.Delay(500);
+
                     var psi = new ProcessStartInfo
                     {
                         FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "ffmpeg" : "ffmpeg.exe",
@@ -205,6 +233,8 @@ namespace KoekoeBot
                         await txStream.FlushAsync();
                         await vnc.WaitForPlaybackFinishAsync();
                     }
+
+                    await Task.Delay(1000);
                 }
                 catch (Exception ex) { Console.Write(ex.StackTrace); }
                 finally
@@ -265,9 +295,14 @@ namespace KoekoeBot
             return this.Channels.Select(x => x.Id).ToArray();
         }
 
+        public SavedGuildData GetGuildData()
+        {
+            return this.guildData;
+        }
+
         public void SaveGuildData()
         {
-            SavedGuildData data = new SavedGuildData();
+            SavedGuildData data = this.guildData != null ? this.guildData : new SavedGuildData();
             data.alarms = this.alarms.ToArray();
             data.channelIds = this.GetRegisteredChannelIds();
             System.Console.WriteLine($"Saving guild data {Guild.Name}");
@@ -298,7 +333,10 @@ namespace KoekoeBot
 
         private string getFileNameForHour(int hour)
         {
-            string[] hourClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x => x.Contains($"{hour % 12}_uur") && x.EndsWith(".mp3")).ToArray();
+            string sampleDir = Path.Combine(Environment.CurrentDirectory, "samples");
+            string[] allClips = Directory.EnumerateFiles(sampleDir).ToArray();
+            string f = Path.GetRelativePath(sampleDir, allClips[0]);
+            string[] hourClipFiles = allClips.Where(x => Path.GetRelativePath(sampleDir, x).StartsWith($"{hour % 12}_uur") && x.EndsWith(".mp3")).ToArray();
             int clipIndex = rnd.Next(hourClipFiles.Length);
 
             return hourClipFiles[clipIndex];
