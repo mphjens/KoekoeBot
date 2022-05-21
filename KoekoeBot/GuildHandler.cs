@@ -4,14 +4,11 @@ using DSharpPlus.VoiceNext;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
-using Microsoft.Extensions.Logging;
-using DSPlus.Examples;
 
 namespace KoekoeBot
 {
@@ -19,6 +16,7 @@ namespace KoekoeBot
     {
         public string AlarmName;
         public DateTime AlarmDate;
+        public int? sampleid = null;
         public ulong userId; //The user that set this alarm, we will try to find this user in the guild's channels.
         public bool recurring; //Not implemented yet
     }
@@ -26,7 +24,7 @@ namespace KoekoeBot
     public class GuildHandler
     {
 
-        private List<DiscordChannel> Channels;
+        public List<ulong> ChannelIds;
         public DiscordGuild Guild;
 
         // The minimum amount of time between playing bonus clips in minutes
@@ -47,7 +45,7 @@ namespace KoekoeBot
 
         public GuildHandler(DiscordClient client, DiscordGuild guild)
         {
-            this.Channels = new List<DiscordChannel>();
+            this.ChannelIds = new List<ulong>();
             this.Client = client;
             this.Guild = guild;
             this.rnd = new Random();
@@ -86,6 +84,19 @@ namespace KoekoeBot
             this.SaveGuildData();
         }
 
+        public async Task<List<DiscordChannel>> GetChannels(List<ulong> ids)
+        {
+            if (ids == null)
+                return null;
+
+            var channels = new List<DiscordChannel>();
+            foreach (var channelid in ids)
+            {
+                channels.Add(await Client.GetChannelAsync(channelid));
+            }
+            return channels;
+        }
+
         public async Task Execute()
         {
             IsRunning = true;
@@ -106,9 +117,11 @@ namespace KoekoeBot
                         continue;
                     if (alarm.AlarmDate.Hour == now.Hour && alarm.AlarmDate.Minute == now.Minute)
                     {
-                        System.Console.WriteLine($"Triggering alarm ${alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
-                        //Announce in the channel where the user that set this alarm currently is.
-                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "CHIME1.wav"), 2, Channels.Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList());
+                        System.Console.WriteLine($"Triggering alarm {alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
+                        //Announce in the channel where the user that set this alarm currently is
+                        List<DiscordChannel> channels = (await GetChannels(this.ChannelIds)).Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList();
+                        string sample = alarm.sampleid != null ? this.guildData.samples.ElementAt(alarm.sampleid.Value) : "CHIME1.wav";
+                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", sample), 2, channels);
                         alarms.RemoveAt(i); //Todo: implement recurring alarms
                         i--;
                     }
@@ -162,7 +175,7 @@ namespace KoekoeBot
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
             if (channels == null)
-                channels = Channels;
+                channels = (await GetChannels(this.ChannelIds));
 
             if (!File.Exists(audio_path))
             {
@@ -170,7 +183,7 @@ namespace KoekoeBot
                 return;
             }
 
-            foreach (DiscordChannel Channel in Channels)
+            foreach (DiscordChannel Channel in channels)
             {
                 if (Channel.Users.Count() == 0)
                 {
@@ -248,21 +261,22 @@ namespace KoekoeBot
 
         public void AddChannel(DiscordChannel channel, bool autosave = true)
         {
-            if (!Channels.Contains(channel))
+            if (!ChannelIds.Contains(channel.Id))
             {
-                Channels.Add(channel);
+                ChannelIds.Add(channel.Id);
 
                 if (autosave)
                     this.SaveGuildData();
             }
         }
 
-        public void AddAlarm(DateTime alarmdate, string alarmname, ulong userid, bool autosave = true)
+        public void AddAlarm(DateTime alarmdate, string alarmname, int? sampleId, ulong userid, bool autosave = true)
         {
             AlarmData nAlarm = new AlarmData()
             {
                 AlarmDate = alarmdate,
                 AlarmName = alarmname,
+                sampleid = sampleId,
                 userId = userid
             };
 
@@ -279,20 +293,21 @@ namespace KoekoeBot
 
         public void RemoveChannel(DiscordChannel channel)
         {
-            if (Channels.Remove(channel))
+            if (ChannelIds.Remove(channel.Id))
             {
                 SaveGuildData();
             }
         }
 
-        public string[] GetRegisteredChannelNames()
+        public async Task<string[]> GetRegisteredChannelNames()
         {
-            return this.Channels.Select(x => x.Name).ToArray();
+            List<DiscordChannel> channels = await this.GetChannels(this.ChannelIds);
+            return channels.Select(x => x.Name).ToArray();
         }
 
         public ulong[] GetRegisteredChannelIds()
         {
-            return this.Channels.Select(x => x.Id).ToArray();
+            return this.ChannelIds.ToArray();
         }
 
         public SavedGuildData GetGuildData()
@@ -321,7 +336,7 @@ namespace KoekoeBot
         public void ClearGuildData()
         {
             this.alarms.Clear();
-            this.Channels.Clear();
+            this.ChannelIds.Clear();
 
             //Delete saved data file
             string data_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{this.Guild.Id}.json");
@@ -329,6 +344,11 @@ namespace KoekoeBot
             {
                 File.Delete(data_path);
             }
+        }
+
+        public KoekoeDiscordId getDiscordId()
+        {
+            return new KoekoeDiscordId() { Id = this.Guild.Id, Name = this.Guild.Name };
         }
 
         private string getFileNameForHour(int hour)

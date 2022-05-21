@@ -73,7 +73,8 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Channel.Guild, false);
             if (handler != null)
             {
-                string channelstext = String.Join("`, `", handler.GetRegisteredChannelNames());
+                string[] names = await handler.GetRegisteredChannelNames();
+                string channelstext = String.Join("`, `", names);
 
                 await ctx.RespondAsync($"Currently registered to: `{channelstext}`");
                 return;
@@ -100,7 +101,7 @@ namespace KoekoeBot
                 }
                 string alarmstext = String.Join("`\n`", alarmtexts);
 
-                await ctx.RespondAsync($"Currently Alarms:\n{alarmstext}");
+                await ctx.RespondAsync($"Alarms:\n{alarmstext}");
                 return;
             }
 
@@ -131,7 +132,7 @@ namespace KoekoeBot
 
 
         [Command("setalarm"), Description("set an alarm for your current voicechannel")]
-        public async Task SetAlarm(CommandContext ctx, string alarmname, [RemainingText, Description("Alarm time ex 4:20 or 15:34")] string datestring)
+        public async Task SetAlarm(CommandContext ctx, string alarmname, string sampleidstr, [RemainingText, Description("Alarm time ex 4:20 or 15:34")] string datestring)
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
@@ -158,8 +159,11 @@ namespace KoekoeBot
                         DateTime dt = DateTime.Now.AddHours(hourdiff).AddMinutes(mindiff).AddSeconds(-DateTime.Now.Second);
 
                         GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, vstat.Channel.Guild, true);
+                        int sampleId = -1;
+                        bool hasSample = int.TryParse(sampleidstr, out sampleId);
 
-                        handler.AddAlarm(dt, alarmname, ctx.User.Id);
+
+                        handler.AddAlarm(dt, alarmname, hasSample ? (int?)sampleId : null, ctx.User.Id);
 
                         if (!handler.IsRunning) //If the handler isn't running for some reason start it TODO: remove these, or implement handler sleep 
                             handler.Execute(); //Will run async
@@ -201,25 +205,45 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<string> samples = handler.GetGuildData().samples;
 
-            
-            DiscordEmbedBuilder builder = new DiscordEmbedBuilder();
-            builder.Title = "Available Samples";
-            builder.Description = "use !kk p {number} to play the sample.";
-            for(int i = 0; i < samples.Count; i++){
-                string filename = samples.ElementAt(i);
-                builder.AddField($"{i}. {Path.GetFileName(filename).Replace('_', ' ').Replace(".mp3", "").Replace("extra ", "")}", $"{Path.GetRelativePath(Environment.CurrentDirectory, filename)}");
-                if((i + 1) % 25 == 0) //There's a limit of 25 fields per embed
+            const int ROWS = 50;
+            const int COLS = 2;
+            const int COL_WIDTH = 40;
+
+            DiscordMessageBuilder builder = new DiscordMessageBuilder();
+            string content = "Available Samples,\nuse !kk p {number} to play the sample.\n\n";
+            int lastLen = 0;
+            for(int i = 0; i < samples.Count + 1; i+= COLS){
+                
+                for(int j = 0; j < COLS; j++)
                 {
-                    await ctx.RespondAsync(builder.Build());
-                    builder.Title = "";
-                    builder.Description = "";
-                    builder.ClearFields();
+                    if (i + j >= samples.Count)
+                        break;
+
+                    string filename = samples.ElementAt(i + j);
+                    string entry = $"{i+j}. {Path.GetFileName(filename).Replace('_', ' ').Replace(".mp3", "").Replace("extra ", "")}";
+                    
+                    content += (j != 0) ? String.Concat(Enumerable.Repeat(" ", COL_WIDTH - lastLen)) + $"{entry}" : $"{entry}";
+                    content += (j == COLS - 1) ? $"\n" : "";
+
+                    lastLen = entry.Length;
+                }
+                
+                if(i > COLS && i % ROWS < COLS) // Limit the number of rows in a single message
+                {
+                    builder.Content = $"```{content}```";
+                    await builder.SendAsync(ctx.Channel);
+                    builder = new DiscordMessageBuilder();
+                    content = "";
                 }
             }
 
             //Send remaining
-            if(builder.Fields.Count > 0)
-                await ctx.RespondAsync(builder.Build());
+            if(content.Length > 0)
+            {
+                builder.Content = $"```{content}```";
+                await builder.SendAsync(ctx.Channel);
+            }
+                
         }
 
         [Command("updatesamples"), Description("Update the list of available samples")]
@@ -259,7 +283,7 @@ namespace KoekoeBot
             }
 
             List<DiscordChannel> channels = new List<DiscordChannel>();
-            channels.Add(ctx.Channel);
+            channels.Add(vstat.Channel);
             await handler.AnnounceFile(filename, 1, channels);
         }
 
