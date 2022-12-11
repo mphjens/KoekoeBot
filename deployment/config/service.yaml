@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ${APP_NAME}
+  name: ${APP_NAME}-service
+spec:
+  type: NodePort
+  ports:
+    - name: "3941"
+      port: 3941
+      targetPort: 3941
+  selector:
+    app: ${APP_NAME}
+---

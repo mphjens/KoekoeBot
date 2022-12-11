@@ -1,0 +1,34 @@
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: koekoebot-pipelinebinding
+  namespace: tekton-pipelines
+spec:
+  params:
+    - name: APP_NAME
+      value: koekoebot
+    - name: SUBPATH
+      value: /
+    - name: BUILDER_IMAGE_LABEL
+      value: latest
+    - name: GITREVISION
+      value: $(body.head_commit.id)
+    - name: namespace
+      value: tekton-pipelines
+    - name: GITURL
+      value: "git@github.com:$(body.repository.full_name)"
+---
+# The Event listener will create a service called el-{event listener name}
+# This can be pointed to in an ingress
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: koekoebot-ci-listener
+  namespace: tekton-pipelines
+spec:
+  serviceAccountName: tekton-triggers-sa
+  triggers:
+    - bindings:
+      - ref: koekoebot-pipelinebinding
+      template:
+        ref: dotnet-core-docker-kube-triggertemplate

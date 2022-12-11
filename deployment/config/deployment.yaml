@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APP_NAME}-deploy
+  labels:
+    app: ${APP_NAME}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${APP_NAME}
+  template:
+    metadata:
+      labels:
+        app: ${APP_NAME}
+    spec:
+      containers:
+        - name: ${APP_NAME}-container
+          image: 192.168.178.199/${APP_NAME}:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /app/volume
+              name: ${APP_NAME}-volume
+          ports:
+            - containerPort: 3941
+              protocol: TCP
+      volumes:
+        - name: ${APP_NAME}-volume
+          persistentVolumeClaim:
+            claimName: ${APP_NAME}-volumeclaim
+---
