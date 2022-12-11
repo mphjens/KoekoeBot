@@ -5,6 +5,7 @@ WORKDIR /app
 COPY ./dist .
 
 # we need ffmpeg to play the audio samples
+RUN apt-get update
 RUN apt-get install ffmpeg
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 
