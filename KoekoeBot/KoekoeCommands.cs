@@ -210,7 +210,23 @@ namespace KoekoeBot
             const int COL_WIDTH = 40;
 
             DiscordMessageBuilder builder = new DiscordMessageBuilder();
-            string content = "Available Samples,\nuse !kk p {number} to play the sample.\n\n";
+            string header = @"
+  ▄█   ▄█▄  ▄██████▄     ▄████████    ▄█   ▄█▄  ▄██████▄     ▄████████ 
+  ███ ▄███▀ ███    ███   ███    ███   ███ ▄███▀ ███    ███   ███    ███ 
+  ███▐██▀   ███    ███   ███    █▀    ███▐██▀   ███    ███   ███    █▀  
+ ▄█████▀    ███    ███  ▄███▄▄▄      ▄█████▀    ███    ███  ▄███▄▄▄     
+▀▀█████▄    ███    ███ ▀▀███▀▀▀     ▀▀█████▄    ███    ███ ▀▀███▀▀▀     
+  ███▐██▄   ███    ███   ███    █▄    ███▐██▄   ███    ███   ███    █▄  
+  ███ ▀███▄ ███    ███   ███    ███   ███ ▀███▄ ███    ███   ███    ███ 
+  ███   ▀█▀  ▀██████▀    ██████████   ███   ▀█▀  ▀██████▀    ██████████ 
+  ▀  ";
+            string content = $"{header}\nAvailable Samples,\nuse !kk p {"number"} to play the sample.\n\n";
+            //Send remaining
+            builder.Content = $"```{content}```";
+            await builder.SendAsync(ctx.Channel);
+            builder = new DiscordMessageBuilder();
+            content = "";
+
             int lastLen = 0;
             for(int i = 0; i < samples.Count + 1; i+= COLS){
                 
