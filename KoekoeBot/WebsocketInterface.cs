@@ -62,7 +62,7 @@ namespace KoekoeBot
         public async Task<bool> Serve()
         {
             serving = true;
-            websocketServer = new SimpleWebSocketServer();
+            websocketServer = new SimpleWebSocketServer(new SimpleWebSocketServerSettings { port = 3941 });
             websocketServer.WebsocketServerEvent += WebsocketServer_WebsocketServerEvent;
 
             websocketServer.StartServer();
@@ -78,7 +78,7 @@ namespace KoekoeBot
             {
                 string received = Encoding.UTF8.GetString(args.data);
                 websocketServer.SendTextMessage("Client: " + args.clientId + " on url: " + args.clientBaseUrl + ", says: " + received);
-
+                Console.WriteLine("Got ws message: " + received);
                 try
                 {
                     var cmd = JsonConvert.DeserializeObject<KoekoeWebsocketCommand>(received);
