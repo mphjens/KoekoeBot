@@ -5,7 +5,7 @@ WORKDIR /app
 COPY ./dist .
 
 # we need ffmpeg to play the audio samples
-RUN apk add  --no-cache ffmpeg
+RUN apt-get install ffmpeg
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 
 # websocket server is running on port 3941
