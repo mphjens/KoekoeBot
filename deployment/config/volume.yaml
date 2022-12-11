@@ -1,0 +1,23 @@
+# You can use this template to create a persistent volume, 
+# it's commented out since my tekton service account
+# is not allowed to create persistent volumes 
+#
+# apiVersion: v1
+# kind: PersistentVolume
+# metadata:
+#   name: ${APP_NAME}-volume
+# spec:
+#   capacity:
+#     storage: 1Gi
+#   volumeMode: Filesystem
+#   accessModes:
+#     - ReadWriteOnce
+#   persistentVolumeReclaimPolicy: Retain
+#   mountOptions:
+#     - hard
+#     - nfsvers=4.1
+#   nfs:
+#     path: /mnt/nfs-share-dir/${APP_NAME}-volume
+#     server: 192.168.178.199
+
+---
