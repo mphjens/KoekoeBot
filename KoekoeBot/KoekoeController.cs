@@ -50,7 +50,7 @@ namespace KoekoeBot
 
             // first, let's load our configuration file
             var json = "";
-            using (var fs = File.OpenRead("config.json"))
+            using (var fs = File.OpenRead("volume/config.json"))
             using (var sr = new StreamReader(fs, new UTF8Encoding(false)))
                 json = await sr.ReadToEndAsync();
 

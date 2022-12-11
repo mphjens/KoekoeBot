@@ -66,7 +66,7 @@ namespace KoekoeBot
             //Create sample list
             var data = this.guildData;
             data.samples = data.samples != null ? data.samples : new List<string>();
-            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x => x.EndsWith(".mp3")).ToArray();
+            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "volume/samples")).Where(x => x.EndsWith(".mp3")).ToArray();
             
             //todo: first use slots where the sample file does not exsist anymore.
             //      this way the indecies of exsisting samples don't change when
