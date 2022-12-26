@@ -379,7 +379,7 @@ namespace KoekoeBot
             System.Console.WriteLine($"Saving guild data {Guild.Name}");
 
             //Update saved data
-            string data_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{this.Guild.Id}.json");
+            string data_path = Path.Combine(Environment.CurrentDirectory, "volume", "data", $"guilddata_{this.Guild.Id}.json");
             if (!File.Exists(data_path))
             {
                 File.Create(data_path).Close();
