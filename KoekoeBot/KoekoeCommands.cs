@@ -182,6 +182,11 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
             if (handler != null)
             {
+                if(samplename.Length == 0) {
+                    await ctx.Message.RespondAsync("Specify a name: `!kk add {samplename}`");
+                    return;
+                }
+                    
                 if(ctx.Message.Attachments.Count > 0 && ctx.Message.Attachments[0].FileName.EndsWith(".mp3"))
                 {
                     string samplepath = Path.Join(handler.getSampleBasePath(), handler.getFileNameForSampleName(samplename));
@@ -197,6 +202,8 @@ namespace KoekoeBot
                 } else {
                     await ctx.Message.RespondAsync($"No file attached, attach a mp3 file to your message");
                 }
+            } else {
+                await ctx.Message.RespondAsync($"I can't run this command from here - ask me in a discord server.");
             }
 
         }
