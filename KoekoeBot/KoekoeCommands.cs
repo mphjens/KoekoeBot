@@ -324,7 +324,7 @@ namespace KoekoeBot
 
             List<DiscordChannel> channels = new List<DiscordChannel>();
             channels.Add(vstat.Channel);
-            await handler.AnnounceFile(sampleNumStr, 1, channels); //each sample has it's sample number as an alias
+            await handler.AnnounceSample(sampleNumStr, 1, channels); //each sample has it's sample number as an alias
         }
 
         //Used for debugging the voicenext and ffmpeg stuff

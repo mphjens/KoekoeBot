@@ -165,7 +165,7 @@ namespace KoekoeBot
                         //Announce in the channel where the user that set this alarm currently is
                         List<DiscordChannel> channels = (await GetChannels(this.ChannelIds)).Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList();
                         string sample = alarm.sampleid != null ? this.guildData.samples.Where(x => ((IList<string>)x.SampleAliases).Contains(alarm.sampleid.ToString())).FirstOrDefault().Filename : "CHIME1.wav";
-                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", sample), 2, channels);
+                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), sample), 2, channels);
                         alarms.RemoveAt(i); //Todo: implement recurring alarms
                         i--;
                     }
@@ -179,7 +179,7 @@ namespace KoekoeBot
                 //Special case for 420 (blaze it)
                 if (now.Minute == 20 && (now.Hour % 12) == 4)
                 {
-                    await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", "420.mp3"));
+                    await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), "samples", "420.mp3"));
                 }
 
                 if (now.Minute == 0) //If we entered a new hour
@@ -192,7 +192,7 @@ namespace KoekoeBot
                 if (nextBonusClip - now <= TimeSpan.Zero)
                 {
                     //Play bonus clip
-                    string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "samples")).Where(x => x.Contains("extra_")).ToArray();
+                    string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), "samples")).Where(x => x.Contains("extra_")).ToArray();
                     int clipIndex = rnd.Next(extraClipFiles.Length);
 
                     if (nextBonusClip != DateTime.UnixEpoch)//Ignore the first time as this runs when the handler is started
@@ -224,6 +224,8 @@ namespace KoekoeBot
             }
 
             guildSample.PlayCount++;
+
+            this.SaveGuildData();
 
             await this.AnnounceFile(getSampleFilePath(guildSample), loopcount, channels);
         }
