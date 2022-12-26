@@ -15,6 +15,7 @@ namespace KoekoeBot
     using DSharpPlus.CommandsNext.Attributes;
     using DSharpPlus.Entities;
     using DSharpPlus.VoiceNext;
+    using System.Net;
 
     class KoekoeCommands : BaseCommandModule
     {
@@ -175,6 +176,28 @@ namespace KoekoeBot
             await ctx.RespondAsync($"Registered alarm `{alarmname}` to `{ctx.User.Username}`");
         }
 
+        [Command("add"), Description("Add a new sample to the list")]
+        public async Task AddSample(CommandContext ctx, [RemainingText, Description("a name for the new sample")] string samplename)
+        {
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
+            if (handler != null)
+            {
+                if(ctx.Message.Attachments.Count > 0)
+                {
+                    string samplepath = Path.Join(handler.getSampleBasePath(), handler.getFileNameForSampleName(samplename));
+                    using(var client = new WebClient()){
+                        client.DownloadFile(new System.Uri(ctx.Message.Attachments[0].ProxyUrl), samplepath);
+                    }
+                    
+                    SampleData sample = handler.AddSampleFromFile(samplepath, samplename);
+
+                    handler.SaveGuildData();
+
+                    await ctx.Message.RespondAsync($"Added {samplename} use !kk p [{String.Join(',', sample.SampleAliases)},{sample.Name}] to play the sample in your current voice channel");
+                }
+            }
+
+        }
 
         //TODO: remove or maybe limit these debug commands
 
@@ -203,7 +226,7 @@ namespace KoekoeBot
         public async Task Samples(CommandContext ctx)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<string> samples = handler.GetGuildData().samples;
+            List<SampleData> samples = handler.GetGuildData().samples;
 
             const int ROWS = 50;
             const int COLS = 2;
@@ -235,8 +258,7 @@ namespace KoekoeBot
                     if (i + j >= samples.Count)
                         break;
 
-                    string filename = samples.ElementAt(i + j);
-                    string entry = $"{i+j}. {Path.GetFileName(filename).Replace('_', ' ').Replace(".mp3", "").Replace("extra ", "")}";
+                    string entry = $"{samples[i].SampleAliases[0]}. {samples[i].Name}";
                     
                     content += (j != 0) ? String.Concat(Enumerable.Repeat(" ", COL_WIDTH - lastLen)) + $"{entry}" : $"{entry}";
                     content += (j == COLS - 1) ? $"\n" : "";
@@ -253,7 +275,7 @@ namespace KoekoeBot
                 }
             }
 
-            //Send remaining
+            //Send remaining content in buffer
             if(content.Length > 0)
             {
                 builder.Content = $"```{content}```";
@@ -291,16 +313,9 @@ namespace KoekoeBot
                 return;
             }
 
-            string filename = handler.GetGuildData().samples.ElementAt(sampleNum);
-            if (!File.Exists(filename))
-            {
-                await ctx.RespondAsync($"Will not be playing {filename} (file not found)");
-                System.Console.WriteLine($"Will not be playing {filename} (file not found)");
-            }
-
             List<DiscordChannel> channels = new List<DiscordChannel>();
             channels.Add(vstat.Channel);
-            await handler.AnnounceFile(filename, 1, channels);
+            await handler.AnnounceFile(sampleNumStr, 1, channels); //each sample has it's sample number as an alias
         }
 
         //Used for debugging the voicenext and ffmpeg stuff

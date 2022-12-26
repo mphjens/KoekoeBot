@@ -22,17 +22,8 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-using DSharpPlus;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Exceptions;
-using DSharpPlus.Entities;
-using DSharpPlus.EventArgs;
-using DSharpPlus.VoiceNext;
 using KoekoeBot;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace DSPlus.Examples

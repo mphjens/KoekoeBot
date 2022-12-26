@@ -35,7 +35,7 @@ namespace KoekoeBot
         public bool IsRunning { get; private set; }
         private DiscordClient Client;
         private bool ShouldRun;
-        
+
         private SavedGuildData guildData;
 
         List<AlarmData> alarms;
@@ -49,7 +49,7 @@ namespace KoekoeBot
             this.Client = client;
             this.Guild = guild;
             this.rnd = new Random();
-            
+
             alarms = new List<AlarmData>();
         }
 
@@ -58,30 +58,50 @@ namespace KoekoeBot
             ShouldRun = false;
         }
 
-        public void SetGuildData(SavedGuildData data){
+        public void SetGuildData(SavedGuildData data)
+        {
             this.guildData = data;
         }
         public void UpdateSamplelist()
         {
             //Create sample list
             var data = this.guildData;
-            data.samples = data.samples != null ? data.samples : new List<string>();
-            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, "volume/samples")).Where(x => x.EndsWith(".mp3")).ToArray();
-            
+            data.samples = data.samples != null ? data.samples : new List<SampleData>();
+            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, getSampleBasePath())).Where(x => x.EndsWith(".mp3")).ToArray();
+
             //todo: first use slots where the sample file does not exsist anymore.
             //      this way the indecies of exsisting samples don't change when
             //      samples are removed from the list. For now appending new ones
             //      works just fine.
-            foreach (string sample in samplefiles)
+            foreach (string filepath in samplefiles)
             {
-                //Add new samplefiles
-                if (!guildData.samples.Contains(sample))
+                string sampleName = sampleNameFromFilename(filepath);
+                SampleData sample = this.guildData.samples.Where(x => x.Name == sampleName).FirstOrDefault();
+
+                if (sample == null)
                 {
-                    guildData.samples.Add(sample);
+                    AddSampleFromFile(filepath, sampleName);
                 }
             }
 
             this.SaveGuildData();
+        }
+
+
+        // Make sure not to add duplicates (TODO: might want to add a guard to this method)
+        public SampleData AddSampleFromFile(string filepath, string samplename = null){
+            string name = samplename != null ? samplename : sampleNameFromFilename(filepath);
+            SampleData nSample = new SampleData();
+
+            nSample.Filename = Path.GetFileName(filepath);
+            nSample.Name = name;
+            nSample.PlayCount = 0;
+            nSample.SampleAliases = new List<string>();
+            nSample.SampleAliases.Add(this.guildData.samples.Count.ToString());
+            
+            this.guildData.samples.Add(nSample);
+            
+            return nSample;
         }
 
         public async Task<List<DiscordChannel>> GetChannels(List<ulong> ids)
@@ -95,6 +115,29 @@ namespace KoekoeBot
                 channels.Add(await Client.GetChannelAsync(channelid));
             }
             return channels;
+        }
+        public string getSampleBasePath()
+        {
+            return $"volume/samples/{this.Guild.Id}";
+        }
+        private string getSampleFilePath(string samplename)
+        {
+            SampleData sample = this.guildData.samples.Where(x => x.Name == samplename || x.SampleAliases.Contains(samplename)).FirstOrDefault();
+            return getSampleFilePath(sample);
+        }
+        private string getSampleFilePath(SampleData sample)
+        {
+            return $"{getSampleBasePath()}/{sample.Filename}";
+        }
+
+        private string sampleNameFromFilename(string filename)
+        {
+            return Path.GetFileName(filename).Replace('_', ' ').Replace(".mp3", "").Replace("extra ", "");
+        }
+
+        public string getFileNameForSampleName(string samplename)
+        {
+            return samplename.Replace(' ', '_');
         }
 
         public async Task Execute()
@@ -120,7 +163,7 @@ namespace KoekoeBot
                         System.Console.WriteLine($"Triggering alarm {alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
                         //Announce in the channel where the user that set this alarm currently is
                         List<DiscordChannel> channels = (await GetChannels(this.ChannelIds)).Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList();
-                        string sample = alarm.sampleid != null ? this.guildData.samples.ElementAt(alarm.sampleid.Value) : "CHIME1.wav";
+                        string sample = alarm.sampleid != null ? this.guildData.samples.Where(x => ((IList<string>)x.SampleAliases).Contains(alarm.sampleid.ToString())).FirstOrDefault().Filename : "CHIME1.wav";
                         await AnnounceFile(Path.Combine(Environment.CurrentDirectory, "samples", sample), 2, channels);
                         alarms.RemoveAt(i); //Todo: implement recurring alarms
                         i--;
@@ -162,13 +205,26 @@ namespace KoekoeBot
                 //System.Console.WriteLine($"Guildhandler has ticked {Guild.Name}");
                 //Calculate the number of miliseconds until a new minute on the system clock (fix? add one second to account for task.delay() inaccuracy)
                 double millisToNextMinute = (double)((60 * 1000) - DateTime.Now.TimeOfDay.TotalMilliseconds % (60 * 1000));
-                
+
                 await Task.Delay((int)millisToNextMinute + 1000);
             }
 
             System.Console.WriteLine($"Guildhandler stopped {Guild.Name}");
 
             IsRunning = false;
+        }
+
+        public async Task AnnounceSample(string sampleName, int loopcount = 1, List<DiscordChannel> channels = null)
+        {
+            SampleData guildSample = this.guildData.samples.Where(x => x.Name == sampleName || x.SampleAliases.Contains(sampleName)).FirstOrDefault();
+            if (guildSample == null)
+            {
+                return;
+            }
+
+            guildSample.PlayCount++;
+
+            await this.AnnounceFile(getSampleFilePath(guildSample), loopcount, channels);
         }
 
         //Joins, plays audio file and leaves again. for all registered channels in this guild

@@ -23,7 +23,7 @@ namespace KoekoeBot
         public string guildName;
         public ulong[] channelIds;
         public AlarmData[] alarms;
-        public List<string> samples;
+        public List<SampleData> samples;
     }
 
     class KoekoeController
@@ -234,7 +234,7 @@ namespace KoekoeBot
         {
             var retval = new KoekoeDiscordIdList();
             retval.type = KoekoeDiscordIdList.KoekoeIdListType.Samples;
-            retval.items = _instances[guildid].GetGuildData().samples.Select((x, i) => new KoekoeDiscordId { Id = (ulong)i, Name = x }).ToArray();
+            retval.items = _instances[guildid].GetGuildData().samples.Select((x, i) => new KoekoeDiscordId { Id = (ulong)i, Name = x.Name }).ToArray();
             return retval;
         }
 
@@ -252,7 +252,7 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(sender, e.Guild);
 
             //Read our saved data
-            string guilddata_path = Path.Combine(Environment.CurrentDirectory, "data", $"guilddata_{e.Guild.Id}.json");
+            string guilddata_path = Path.Combine(Environment.CurrentDirectory, "volume", "data", $"guilddata_{e.Guild.Id}.json");
             if (File.Exists(guilddata_path))
             {
                 string json = File.ReadAllText(guilddata_path).ToString();
@@ -289,6 +289,12 @@ namespace KoekoeBot
 
         public static GuildHandler GetGuildHandler(DiscordClient client, DiscordGuild guild, bool create=true)
         {
+            string sampleDirectory = Path.Combine("volume","samples", guild.Id.ToString());
+            if(!Directory.Exists(sampleDirectory))
+            {
+                Directory.CreateDirectory(sampleDirectory);
+            }
+
             if(_instances.ContainsKey(guild.Id))
             {
                 return _instances[guild.Id];
