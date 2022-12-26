@@ -182,7 +182,7 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
             if (handler != null)
             {
-                if(ctx.Message.Attachments.Count > 0)
+                if(ctx.Message.Attachments.Count > 0 && ctx.Message.Attachments[0].FileName.EndsWith(".mp3"))
                 {
                     string samplepath = Path.Join(handler.getSampleBasePath(), handler.getFileNameForSampleName(samplename));
                     using(var client = new WebClient()){
@@ -194,6 +194,8 @@ namespace KoekoeBot
                     handler.SaveGuildData();
 
                     await ctx.Message.RespondAsync($"Added {samplename} use !kk p [{String.Join(',', sample.SampleAliases)},{sample.Name}] to play the sample in your current voice channel");
+                } else {
+                    await ctx.Message.RespondAsync($"No file attached, attach a mp3 file to your message");
                 }
             }
 
