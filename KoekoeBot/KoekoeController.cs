@@ -42,7 +42,7 @@ namespace KoekoeBot
         {
             _instances = new Dictionary<ulong, GuildHandler>();
 
-            string data_path = Path.Combine(Environment.CurrentDirectory, "data");
+            string data_path = Path.Combine(Environment.CurrentDirectory, "volume", "data");
             if (!Directory.Exists(data_path))
             {
                 Directory.CreateDirectory(data_path);
