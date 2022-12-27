@@ -168,7 +168,13 @@ namespace KoekoeBot
         }
         private static Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
         {
-            KoekoeController.StartupGuildHandler(sender, e);
+            KoekoeController.StartupGuildHandler(sender, e).ContinueWith(async (task)=>{
+                Console.WriteLine($"Guildhandler for {e.Guild.Name} stopped, trying to restart it automatically in 30 seconds.");
+                _instances.Remove(e.Guild.Id);
+
+                await Task.Delay(30 * 1000);
+                Client_GuildAvailable(sender, e);
+            });
 
             return Task.CompletedTask;
         }
@@ -176,7 +182,6 @@ namespace KoekoeBot
         public static async Task<bool> HandleWebsocketCommand(KoekoeWebsocketCommand cmd, SimpleWebSocketServer wsServer, WebSocketEventArg wsEvent)
         {
             GuildHandler handler;
-            
 
             switch(cmd.type)
             {
@@ -239,7 +244,7 @@ namespace KoekoeBot
         }
 
         //Hooked up in program.cs
-        public static void StartupGuildHandler(DiscordClient sender, GuildCreateEventArgs e)
+        public static Task StartupGuildHandler(DiscordClient sender, GuildCreateEventArgs e)
         {
             // let's log the name of the guild that was just
             // sent to our client
@@ -283,7 +288,9 @@ namespace KoekoeBot
             handler.UpdateSamplelist();
 
             if (!handler.IsRunning) //Run the handler loop if it's not already started
-                handler.Execute();
+                return handler.Execute();
+            
+            return Task.CompletedTask;
 
         }
 
@@ -307,7 +314,6 @@ namespace KoekoeBot
                 nHandler.SetGuildData(new SavedGuildData());
                 return nHandler;
             }
-
 
             return null;
         }
