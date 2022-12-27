@@ -71,6 +71,8 @@ namespace KoekoeBot
             foreach(SampleData sample in data.samples) {
                 if(!File.Exists(Path.Combine(getSampleBasePath(), sample.Filename))) {
                     sample.enabled = false;
+                } else {
+                    sample.enabled = true; // TODO: FIXME: we probably want to keep them disabled in some cases even if we have the file
                 }
             }
 
