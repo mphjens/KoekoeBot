@@ -73,6 +73,7 @@ namespace KoekoeBot
             //      this way the indecies of exsisting samples don't change when
             //      samples are removed from the list. For now appending new ones
             //      works just fine.
+            //      Update: its solved for now by leaving gaps when samples are deleted.
             foreach (string filepath in samplefiles)
             {
                 string sampleName = sampleNameFromFilename(filepath);
@@ -84,7 +85,7 @@ namespace KoekoeBot
                 }
             }
 
-            this.SaveGuildData();
+            this.SaveGuildData(false);
         }
 
 
@@ -374,7 +375,7 @@ namespace KoekoeBot
             return this.guildData;
         }
 
-        public void SaveGuildData()
+        public void SaveGuildData(bool silent = true)
         {
             SavedGuildData data = this.guildData != null ? this.guildData : new SavedGuildData();
             data.alarms = this.alarms.ToArray();
@@ -389,7 +390,8 @@ namespace KoekoeBot
             }
             File.WriteAllText(data_path, JsonConvert.SerializeObject(data));
 
-            System.Console.WriteLine($"Saved guild data to {data_path}");
+            if(!silent)
+                System.Console.WriteLine($"Saved guild data to {data_path}");
         }
 
         public void ClearGuildData()
