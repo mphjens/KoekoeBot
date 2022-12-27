@@ -181,21 +181,23 @@ namespace KoekoeBot
 
         public static async Task<bool> HandleWebsocketCommand(KoekoeWebsocketCommand cmd, SimpleWebSocketServer wsServer, WebSocketEventArg wsEvent)
         {
-            GuildHandler handler;
+            GuildHandler handler = null;
+            List<DiscordChannel> channels;
+            if (cmd.type != KoekoeWebsocketCommand.WebsocketCommandType.GetGuilds && !_instances.TryGetValue(cmd.GuildId, out handler))
+            {
+                Console.WriteLine($"got '{cmd.type}' command for unknown guildid {cmd.GuildId}");
+                return false;
+            }
+            
+            channels = await handler.GetChannels(cmd.channelIds?.ToList());
 
             switch(cmd.type)
             {
                 case KoekoeWebsocketCommand.WebsocketCommandType.PlayFile:
-                    if (!_instances.TryGetValue(cmd.GuildId, out handler))
-                    {
-                        Console.WriteLine($"got '{cmd.type}' command for unknown guildid {cmd.GuildId}");
-                        return false;
-                    }
-                    List<DiscordChannel> channels = await handler.GetChannels(cmd.channelIds?.ToList());
                     await handler.AnnounceFile(cmd.args[0], 1, channels);
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.PlaySample:
-
+                    await handler.AnnounceSample(cmd.args[0], 1, channels);
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.Debug:
 
