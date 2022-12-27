@@ -7,6 +7,7 @@ namespace KoekoeBot
     public class SampleData
     {
         public string Name;
+        public bool enabled;
         public DateTime DateAdded;
         public int PlayCount;
         public List<string> SampleAliases;  // can be used the the play command to address this sample

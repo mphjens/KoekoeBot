@@ -235,7 +235,7 @@ namespace KoekoeBot
         public async Task Samples(CommandContext ctx)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples.OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
+            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
 
             const int ROWS = 50;
             const int COLS = 2;
