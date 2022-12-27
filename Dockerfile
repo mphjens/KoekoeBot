@@ -10,7 +10,7 @@ COPY ./dist .
 
 # we need ffmpeg to play the audio samples libopus and libsodium for discord voice
 RUN apt-get update
-RUN apt-get install -y ffmpeg libopus-dev libsodium-dev 
+RUN apt-get install -y -qq ffmpeg libopus-dev libsodium-dev 
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 
 # websocket server is running on port 3941
