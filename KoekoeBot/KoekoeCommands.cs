@@ -182,27 +182,33 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
             if (handler != null)
             {
-                if(samplename.Length == 0) {
+                if (samplename.Length == 0)
+                {
                     await ctx.Message.RespondAsync("Specify a name: `!kk add {samplename}`");
                     return;
                 }
-                    
-                if(ctx.Message.Attachments.Count > 0 && ctx.Message.Attachments[0].FileName.EndsWith(".mp3"))
+
+                if (ctx.Message.Attachments.Count > 0 && ctx.Message.Attachments[0].FileName.EndsWith(".mp3"))
                 {
                     string samplepath = Path.Join(handler.getSampleBasePath(), handler.getFileNameForSampleName(samplename));
-                    using(var client = new WebClient()){
+                    using (var client = new WebClient())
+                    {
                         client.DownloadFile(new System.Uri(ctx.Message.Attachments[0].ProxyUrl), $"{samplepath}.mp3");
                     }
-                    
+
                     SampleData sample = handler.AddSampleFromFile(samplepath, samplename);
 
                     handler.SaveGuildData();
 
                     await ctx.Message.RespondAsync($"Added {samplename} use !kk p [{String.Join(',', sample.SampleAliases)},{sample.Name}] to play the sample in your current voice channel");
-                } else {
+                }
+                else
+                {
                     await ctx.Message.RespondAsync($"No file attached, attach a mp3 file to your message");
                 }
-            } else {
+            }
+            else
+            {
                 await ctx.Message.RespondAsync($"I can't run this command from here - ask me in a discord server.");
             }
 
@@ -223,33 +229,64 @@ namespace KoekoeBot
 
         }
 
-        [Command("cleardata"), Description("clear all data from this guild")]
-        public async Task ClearData(CommandContext ctx)
+        // [Command("cleardata"), Description("clear all data from this guild")]
+        // public async Task ClearData(CommandContext ctx)
+        // {
+        //     GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
+        //     handler.ClearGuildData();
+        //     await ctx.RespondAsync($"Cleared all data for this guild");
+        // }
+
+        [Command("alias"), Description("add an alias for a sample")]
+        public async Task AddAlias(CommandContext ctx, string samplename, [RemainingText, Description("an alias for the given sample")] string alias)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-            handler.ClearGuildData();
-            await ctx.RespondAsync($"Cleared all data for this guild");
+
+            if (handler.AddAlias(samplename, alias))
+            {
+                await ctx.RespondAsync($"Added {alias} as an alias for {samplename}");
+            }
+            else
+            {
+                await ctx.RespondAsync($"{alias} is already taken by another sample");
+            }
+        }
+
+        [Command("removealias"), Description("remove an alias from a sample")]
+        public async Task RemoveAlias(CommandContext ctx, string samplename, [RemainingText, Description("an alias for the given sample")] string alias)
+        {
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
+
+            if (handler.RemoveAlias(samplename, alias))
+            {
+                await ctx.RespondAsync($"Removed {alias} as an alias for {samplename}");
+            }
+            else
+            {
+                await ctx.RespondAsync($"{alias} is not an alias for {samplename}");
+            }
         }
 
         [Command("search"), Description("Search for samples")]
         public async Task Search(CommandContext ctx, [RemainingText, Description("a search term")] string searchQuery)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
-            
-            if(searchQuery.Length > 0){
-                samples = samples.Where(x=>x.Name.Contains(searchQuery) || x.SampleAliases.Where(x=>x.Contains(searchQuery)).Any()).ToList();
-            }
+            List<SampleData> samples = handler.GetGuildData().samples
+                .Where(x => x.enabled)
+                .Where(x => x.Name.Contains(searchQuery) || x.SampleAliases.Where(x => x.Contains(searchQuery)).Any())
+                .OrderBy((x) => int.Parse(x.SampleAliases[0]))
+                .ToList();
 
             int max_rows = 50;
             string content = "Koekoe search result:\n\n";
             DiscordMessageBuilder builder = new DiscordMessageBuilder();
-            for(int i = 0; i < samples.Count; i++) {
+            for (int i = 0; i < samples.Count; i++)
+            {
                 SampleData sample = samples[i];
 
                 content += $"{sample.SampleAliases[0]}. {sample.Name}: played {sample.PlayCount} times, Aliases: {String.Join(',', sample.SampleAliases)}\n";
 
-                if(i >= max_rows) // Limit the number of rows in a single message
+                if (i >= max_rows) // Limit the number of rows in a single message
                 {
                     builder.Content = $"```{content}```";
                     await builder.SendAsync(ctx.Channel);
@@ -259,7 +296,7 @@ namespace KoekoeBot
             }
 
             //Send remaining content in buffer
-            if(content.Length > 0)
+            if (content.Length > 0)
             {
                 builder.Content = $"```{content}```";
                 await builder.SendAsync(ctx.Channel);
@@ -271,8 +308,8 @@ namespace KoekoeBot
         public async Task Samples(CommandContext ctx)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
-            
+            List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.enabled).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
+
             const int ROWS = 50;
             const int COLS = 2;
             const int COL_WIDTH = 40;
@@ -296,22 +333,23 @@ namespace KoekoeBot
             content = "";
 
             int lastLen = 0;
-            for(int i = 0; i < samples.Count + 1; i+= COLS){
-                
-                for(int j = 0; j < COLS; j++)
+            for (int i = 0; i < samples.Count + 1; i += COLS)
+            {
+
+                for (int j = 0; j < COLS; j++)
                 {
                     if (i + j >= samples.Count)
                         break;
 
-                    string entry = $"{samples[i+j].SampleAliases[0]}. {samples[i+j].Name}";
-                    
+                    string entry = $"{samples[i + j].SampleAliases[0]}. {samples[i + j].Name}";
+
                     content += (j != 0) ? String.Concat(Enumerable.Repeat(" ", COL_WIDTH - lastLen)) + $"{entry}" : $"{entry}";
                     content += (j == COLS - 1) ? $"\n" : "";
 
                     lastLen = entry.Length;
                 }
-                
-                if(i > COLS && i % ROWS < COLS) // Limit the number of rows in a single message
+
+                if (i > COLS && i % ROWS < COLS) // Limit the number of rows in a single message
                 {
                     builder.Content = $"```{content}```";
                     await builder.SendAsync(ctx.Channel);
@@ -321,16 +359,17 @@ namespace KoekoeBot
             }
 
             //Send remaining content in buffer
-            if(content.Length > 0)
+            if (content.Length > 0)
             {
                 builder.Content = $"```{content}```";
                 await builder.SendAsync(ctx.Channel);
             }
-                
+
         }
 
         [Command("updatesamples"), Description("Update the list of available samples")]
-        public async Task UpdateSamples(CommandContext ctx){
+        public async Task UpdateSamples(CommandContext ctx)
+        {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             handler.UpdateSamplelist();
             await ctx.RespondAsync("Sample list updated");
@@ -348,11 +387,11 @@ namespace KoekoeBot
             }
 
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-            
+
             int sampleNum = -1;
             int.TryParse(sampleNumStr, out sampleNum);
 
-            if(sampleNum < 0 || sampleNum > handler.GetGuildData().samples.Count - 1)
+            if (sampleNum < 0 || sampleNum > handler.GetGuildData().samples.Count - 1)
             {
                 await ctx.RespondAsync("Invalid sample number");
                 return;

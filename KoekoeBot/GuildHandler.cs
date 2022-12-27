@@ -101,6 +101,12 @@ namespace KoekoeBot
         // Make sure not to add duplicates (TODO: might want to add a guard to this method)
         public SampleData AddSampleFromFile(string filepath, string samplename = null){
             string name = samplename != null ? samplename : sampleNameFromFilename(filepath);
+            SampleData existing = this.getSample(name);
+            if(existing != null){
+                Console.WriteLine($"WARN: {name} already exists in {this.guildData.guildName}");
+                return null;
+            }
+
             SampleData nSample = new SampleData();
 
             nSample.Filename = Path.GetFileName(filepath);
@@ -114,6 +120,35 @@ namespace KoekoeBot
             this.guildData.samples.Add(nSample);
             
             return nSample;
+        }
+
+        public bool AddAlias(string samplename, string alias) {
+            SampleData existing = getSample(alias);
+            if(existing != null)
+                return false;
+
+            SampleData sample = getSample(samplename);
+            sample.SampleAliases.Add(alias);
+            
+            this.SaveGuildData(false);
+
+            return true;
+        }
+
+        public bool RemoveAlias(string samplename, string alias) {
+            SampleData existing = getSample(alias);
+            if(existing == null)
+                return false;
+
+            existing.SampleAliases.Remove(alias);
+            
+            this.SaveGuildData(false);
+
+            return true;
+        }
+
+        public SampleData getSample(string nameOrAlias) {
+            return this.guildData.samples.Where(x=> x.Name == nameOrAlias || x.SampleAliases.Contains(nameOrAlias)).FirstOrDefault();
         }
 
         public async Task<List<DiscordChannel>> GetChannels(List<ulong> ids)
@@ -134,7 +169,7 @@ namespace KoekoeBot
         }
         private string getSampleFilePath(string samplename)
         {
-            SampleData sample = this.guildData.samples.Where(x => x.Name == samplename || x.SampleAliases.Contains(samplename)).FirstOrDefault();
+            SampleData sample = this.getSample(samplename);
             return getSampleFilePath(sample);
         }
         private string getSampleFilePath(SampleData sample)
@@ -175,7 +210,7 @@ namespace KoekoeBot
                         System.Console.WriteLine($"Triggering alarm {alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
                         //Announce in the channel where the user that set this alarm currently is
                         List<DiscordChannel> channels = (await GetChannels(this.ChannelIds)).Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList();
-                        string sample = alarm.sampleid != null ? this.guildData.samples.Where(x => ((IList<string>)x.SampleAliases).Contains(alarm.sampleid.ToString())).FirstOrDefault().Filename : "CHIME1.wav";
+                        string sample = alarm.sampleid != null ? this.getSample(alarm.sampleid.ToString()).Filename : "CHIME1.wav";
                         await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), sample), 2, channels);
                         alarms.RemoveAt(i); //Todo: implement recurring alarms
                         i--;
@@ -228,7 +263,7 @@ namespace KoekoeBot
 
         public async Task AnnounceSample(string sampleName, int loopcount = 1, List<DiscordChannel> channels = null)
         {
-            SampleData guildSample = this.guildData.samples.Where(x => x.Name == sampleName || x.SampleAliases.Contains(sampleName)).FirstOrDefault();
+            SampleData guildSample = this.getSample(sampleName);
             if (guildSample == null)
             {
                 return;
