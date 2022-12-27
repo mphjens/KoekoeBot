@@ -191,7 +191,7 @@ namespace KoekoeBot
                 {
                     string samplepath = Path.Join(handler.getSampleBasePath(), handler.getFileNameForSampleName(samplename));
                     using(var client = new WebClient()){
-                        client.DownloadFile(new System.Uri(ctx.Message.Attachments[0].ProxyUrl), samplepath);
+                        client.DownloadFile(new System.Uri(ctx.Message.Attachments[0].ProxyUrl), $"{samplepath}.mp3");
                     }
                     
                     SampleData sample = handler.AddSampleFromFile(samplepath, samplename);
@@ -235,7 +235,11 @@ namespace KoekoeBot
         public async Task Samples(CommandContext ctx, [RemainingText, Description("a search term")] string searchQuery)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).Where(x=>x.Name.Contains(searchQuery) || x.SampleAliases.Where(x=>x.Contains(searchQuery)).Any()).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
+            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
+            
+            if(searchQuery.Length > 0){
+                samples = samples.Where(x=>x.Name.Contains(searchQuery) || x.SampleAliases.Where(x=>x.Contains(searchQuery)).Any()).ToList();
+            }
 
             const int ROWS = 50;
             const int COLS = 2;
