@@ -67,7 +67,7 @@ namespace KoekoeBot
             //Create sample list
             var data = this.guildData;
             data.samples = data.samples != null ? data.samples : new List<SampleData>();
-            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, getSampleBasePath())).Where(x => x.EndsWith(".mp3")).OrderBy(f => File.GetLastWriteTimeUtc(f)).ToArray();
+            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, getSampleBasePath())).Where(x => x.EndsWith(".mp3")).OrderBy(f => File.GetCreationTimeUtc(f)).ToArray();
 
             //todo: first use slots where the sample file does not exsist anymore.
             //      this way the indecies of exsisting samples don't change when
@@ -138,7 +138,7 @@ namespace KoekoeBot
 
         public string getFileNameForSampleName(string samplename)
         {
-            return samplename.Replace(' ', '_');
+            return string.Join("-",$"extra_{samplename.Replace(' ', '_')}".Split(Path.GetInvalidFileNameChars()));
         }
 
         public async Task Execute()
