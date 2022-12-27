@@ -67,8 +67,15 @@ namespace KoekoeBot
             //Create sample list
             var data = this.guildData;
             data.samples = data.samples != null ? data.samples : new List<SampleData>();
-            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, getSampleBasePath())).Where(x => x.EndsWith(".mp3")).OrderBy(f => File.GetCreationTimeUtc(f)).ToArray();
 
+            foreach(SampleData sample in data.samples) {
+                if(!File.Exists(Path.Combine(getSampleBasePath(), sample.Filename))) {
+                    sample.enabled = false;
+                }
+            }
+
+            string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, getSampleBasePath())).Where(x => x.EndsWith(".mp3")).OrderBy(f => File.GetCreationTimeUtc(f)).ToArray();
+    
             //todo: first use slots where the sample file does not exsist anymore.
             //      this way the indecies of exsisting samples don't change when
             //      samples are removed from the list. For now appending new ones
@@ -77,7 +84,7 @@ namespace KoekoeBot
             foreach (string filepath in samplefiles)
             {
                 string sampleName = sampleNameFromFilename(filepath);
-                SampleData sample = this.guildData.samples.Where(x => x.Name == sampleName).FirstOrDefault();
+                SampleData sample = this.guildData.samples.Where(x => x.Filename == Path.GetFileName(filepath)).FirstOrDefault();
 
                 if (sample == null)
                 {
@@ -100,6 +107,7 @@ namespace KoekoeBot
             nSample.SampleAliases = new List<string>();
             nSample.SampleAliases.Add(this.guildData.samples.Count.ToString());
             nSample.DateAdded = DateTime.UtcNow;
+            nSample.enabled = true;
             
             this.guildData.samples.Add(nSample);
             
@@ -185,7 +193,7 @@ namespace KoekoeBot
 
                 if (now.Minute == 0) //If we entered a new hour
                 {
-                    System.Console.WriteLine($"Guildhandler entered new hour");
+                    System.Console.WriteLine($"Guildhandler for {this.guildData.guildName} entered new hour: {now.Hour}");
                     await AnnounceFile(getFileNameForHour(now.Hour));
                 }
 
