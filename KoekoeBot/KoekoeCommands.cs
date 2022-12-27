@@ -231,8 +231,8 @@ namespace KoekoeBot
             await ctx.RespondAsync($"Cleared all data for this guild");
         }
 
-        [Command("samples"), Description("List available samples")]
-        public async Task Samples(CommandContext ctx, [RemainingText, Description("a search term")] string searchQuery)
+        [Command("search"), Description("Search for samples")]
+        public async Task Search(CommandContext ctx, [RemainingText, Description("a search term")] string searchQuery)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
@@ -241,6 +241,41 @@ namespace KoekoeBot
                 samples = samples.Where(x=>x.Name.Contains(searchQuery) || x.SampleAliases.Where(x=>x.Contains(searchQuery)).Any()).ToList();
             }
 
+            int max_rows = 50;
+            string content = "Koekoe search result:\n\n";
+            DiscordMessageBuilder builder = new DiscordMessageBuilder();
+            for(int i = 0; i < samples.Count; i++) {
+                SampleData sample = samples[i];
+
+                content += $"{sample.SampleAliases[0]}. {sample.Name} played {sample.PlayCount} times\n";
+                if(sample.SampleAliases.Count > 1){
+                    content += $"\t Aliases: {String.Join(',', sample.SampleAliases.Skip(1))}\n";
+                }
+
+                if(i >= max_rows) // Limit the number of rows in a single message
+                {
+                    builder.Content = $"```{content}```";
+                    await builder.SendAsync(ctx.Channel);
+                    builder = new DiscordMessageBuilder();
+                    content = "";
+                }
+            }
+
+            //Send remaining content in buffer
+            if(content.Length > 0)
+            {
+                builder.Content = $"```{content}```";
+                await builder.SendAsync(ctx.Channel);
+            }
+
+        }
+
+        [Command("samples"), Description("List available samples")]
+        public async Task Samples(CommandContext ctx)
+        {
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
+            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
+            
             const int ROWS = 50;
             const int COLS = 2;
             const int COL_WIDTH = 40;
