@@ -247,7 +247,7 @@ namespace KoekoeBot
             for(int i = 0; i < samples.Count; i++) {
                 SampleData sample = samples[i];
 
-                content += $"{sample.SampleAliases[0]}. {sample.Name}: played {sample.PlayCount} times, Aliases: {String.Join(',', sample.SampleAliases)}";
+                content += $"{sample.SampleAliases[0]}. {sample.Name}: played {sample.PlayCount} times, Aliases: {String.Join(',', sample.SampleAliases)}\n";
 
                 if(i >= max_rows) // Limit the number of rows in a single message
                 {
