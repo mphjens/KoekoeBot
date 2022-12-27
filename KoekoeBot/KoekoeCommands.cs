@@ -235,7 +235,7 @@ namespace KoekoeBot
         public async Task Samples(CommandContext ctx)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples;
+            List<SampleData> samples = handler.GetGuildData().samples.OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
 
             const int ROWS = 50;
             const int COLS = 2;
@@ -267,7 +267,7 @@ namespace KoekoeBot
                     if (i + j >= samples.Count)
                         break;
 
-                    string entry = $"{samples[i].SampleAliases[0]}. {samples[i].Name}";
+                    string entry = $"{samples[i+j].SampleAliases[0]}. {samples[i+j].Name}";
                     
                     content += (j != 0) ? String.Concat(Enumerable.Repeat(" ", COL_WIDTH - lastLen)) + $"{entry}" : $"{entry}";
                     content += (j == COLS - 1) ? $"\n" : "";
