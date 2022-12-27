@@ -179,7 +179,7 @@ namespace KoekoeBot
                 //Special case for 420 (blaze it)
                 if (now.Minute == 20 && (now.Hour % 12) == 4)
                 {
-                    await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), "samples", "420.mp3"));
+                    await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), "420.mp3"));
                 }
 
                 if (now.Minute == 0) //If we entered a new hour
@@ -192,7 +192,7 @@ namespace KoekoeBot
                 if (nextBonusClip - now <= TimeSpan.Zero)
                 {
                     //Play bonus clip
-                    string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), "samples")).Where(x => x.Contains("extra_")).ToArray();
+                    string[] extraClipFiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath())).Where(x => x.Contains("extra_")).ToArray();
                     int clipIndex = rnd.Next(extraClipFiles.Length);
 
                     if (nextBonusClip != DateTime.UnixEpoch)//Ignore the first time as this runs when the handler is started
@@ -412,7 +412,7 @@ namespace KoekoeBot
 
         private string getFileNameForHour(int hour)
         {
-            string sampleDir = Path.Combine(Environment.CurrentDirectory, "samples");
+            string sampleDir = Path.Combine(Environment.CurrentDirectory, getSampleBasePath());
             string[] allClips = Directory.EnumerateFiles(sampleDir).ToArray();
             string f = Path.GetRelativePath(sampleDir, allClips[0]);
             string[] hourClipFiles = allClips.Where(x => Path.GetRelativePath(sampleDir, x).StartsWith($"{hour % 12}_uur") && x.EndsWith(".mp3")).ToArray();
