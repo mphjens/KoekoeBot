@@ -232,10 +232,10 @@ namespace KoekoeBot
         }
 
         [Command("samples"), Description("List available samples")]
-        public async Task Samples(CommandContext ctx)
+        public async Task Samples(CommandContext ctx, [RemainingText, Description("a search term")] string searchQuery)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
+            List<SampleData> samples = handler.GetGuildData().samples.Where(x=>x.enabled).Where(x=>x.Name.Contains(searchQuery) || x.SampleAliases.Where(x=>x.Contains(searchQuery)).Any()).OrderBy((x)=>int.Parse(x.SampleAliases[0])).ToList();
 
             const int ROWS = 50;
             const int COLS = 2;
