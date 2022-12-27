@@ -188,7 +188,7 @@ namespace KoekoeBot
                 Console.WriteLine($"got '{cmd.type}' command for unknown guildid {cmd.GuildId}");
                 return false;
             }
-            
+
             channels = await handler.GetChannels(cmd.channelIds?.ToList());
 
             switch(cmd.type)
@@ -241,7 +241,7 @@ namespace KoekoeBot
         {
             var retval = new KoekoeDiscordIdList();
             retval.type = KoekoeDiscordIdList.KoekoeIdListType.Samples;
-            retval.items = _instances[guildid].GetGuildData().samples.Select((x, i) => new KoekoeDiscordId { Id = (ulong)i, Name = x.Name }).ToArray();
+            retval.items = _instances[guildid].GetGuildData().samples.Select((x, i) => new KoekoeDiscordId { Id = ulong.Parse(x.SampleAliases[0]), Name = x.Name }).ToArray();
             return retval;
         }
 
