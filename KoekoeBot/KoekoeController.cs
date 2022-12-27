@@ -169,11 +169,11 @@ namespace KoekoeBot
         private static Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
         {
             KoekoeController.StartupGuildHandler(sender, e).ContinueWith(async (task)=>{
-                Console.WriteLine($"Guildhandler for {e.Guild.Name} stopped, trying to restart it automatically in 30 seconds.");
-                _instances.Remove(e.Guild.Id);
+                // Console.WriteLine($"Guildhandler for {e.Guild.Name} stopped, trying to restart it automatically in 30 seconds.");
+                // _instances.Remove(e.Guild.Id);
 
-                await Task.Delay(30 * 1000);
-                Client_GuildAvailable(sender, e);
+                // await Task.Delay(30 * 1000);
+                // Client_GuildAvailable(sender, e);
             });
 
             return Task.CompletedTask;
