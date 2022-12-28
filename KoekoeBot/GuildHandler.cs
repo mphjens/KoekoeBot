@@ -198,6 +198,8 @@ namespace KoekoeBot
                 DateTime now = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
                 DateTime.UtcNow, "W. Europe Standard Time"); // TODO: make this configurable
 
+                Console.WriteLine($"TIME: {now.Hour}:{now.Minute}");
+
                 int alarmCountStart = alarms.Count;
                 //Check if we need to trigger an alarm
                 for (int i = 0; i < alarms.Count; i++)
