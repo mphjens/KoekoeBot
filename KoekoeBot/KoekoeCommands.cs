@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
+using System.Data;
 
 namespace KoekoeBot
 {
@@ -16,6 +15,7 @@ namespace KoekoeBot
     using DSharpPlus.Entities;
     using DSharpPlus.VoiceNext;
     using System.Net;
+    using System.Text;
 
     class KoekoeCommands : BaseCommandModule
     {
@@ -277,30 +277,19 @@ namespace KoekoeBot
                 .ToList();
 
             int max_rows = 50;
-            string content = "Koekoe search result:\n\n";
             DiscordMessageBuilder builder = new DiscordMessageBuilder();
-            for (int i = 0; i < samples.Count; i++)
+            
+            for (int i = 0; i < samples.Count; i+=max_rows)
             {
-                SampleData sample = samples[i];
+                // SampleData sample = samples[i];
 
-                content += $"{sample.SampleAliases[0]}. {sample.Name}\t|\t {sample.PlayCount} plays\t|\t Aliases: {String.Join(',', sample.SampleAliases.Skip(1))} \t|\t {(sample.enabled ? "ENABLED" : "DISABLED")}\n";
-
-                if (i >= max_rows) // Limit the number of rows in a single message
-                {
-                    builder.Content = $"```{content}```";
-                    await builder.SendAsync(ctx.Channel);
-                    builder = new DiscordMessageBuilder();
-                    content = "";
-                }
-            }
-
-            //Send remaining content in buffer
-            if (content.Length > 0)
-            {
-                builder.Content = $"```{content}```";
+                // content += $"{sample.SampleAliases[0]}. {sample.Name}\t|\t {sample.PlayCount} plays\t|\t Aliases: {String.Join(',', sample.SampleAliases.Skip(1))} \t|\t {(sample.enabled ? "ENABLED" : "DISABLED")}\n";
+                StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Skip(i).Take(max_rows).Select(x=> new string[] {x.Name, x.PlayCount.ToString(), String.Join(',',x.SampleAliases), x.enabled.ToString()}).ToArray(), new string[] {"Id", "PlayCount", "Aliases", "Enabled"});
+                
+                builder.Content = $"```Koekoe search result:\n\n{tableBuilder.ToString()}```";
                 await builder.SendAsync(ctx.Channel);
+                builder = new DiscordMessageBuilder();                
             }
-
         }
 
         [Command("samples"), Description("List available samples")]
