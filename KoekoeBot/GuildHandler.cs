@@ -70,6 +70,7 @@ namespace KoekoeBot
 
             foreach(SampleData sample in data.samples) {
                 if(!File.Exists(Path.Combine(getSampleBasePath(), sample.Filename))) {
+                    Console.WriteLine($"disabling {sample.Name} because {sample.Filename} does not exist");
                     sample.enabled = false;
                 } else {
                     sample.enabled = true; // TODO: FIXME: we probably want to keep them disabled in some cases even if we have the file
@@ -184,7 +185,7 @@ namespace KoekoeBot
 
         public string getFileNameForSampleName(string samplename)
         {
-            return string.Join("-",$"extra_{samplename.Replace(' ', '_')}".Split(Path.GetInvalidFileNameChars()));
+            return $"{string.Join("-",$"extra_{samplename.Replace(' ', '_')}".Split(Path.GetInvalidFileNameChars()))}.mp3";
         }
 
         public async Task Execute()
