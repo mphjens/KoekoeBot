@@ -176,7 +176,7 @@ namespace KoekoeBot
             await ctx.RespondAsync($"Registered alarm `{alarmname}` to `{ctx.User.Username}`");
         }
 
-        [Command("add"), Description("Add a new sample to the list")]
+        [Command("add"), Description("Add a new sample by attaching an mp3 file to your message")]
         public async Task AddSample(CommandContext ctx, [RemainingText, Description("a name for the new sample")] string samplename)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
@@ -215,8 +215,7 @@ namespace KoekoeBot
         }
 
         //TODO: remove or maybe limit these debug commands
-
-        [Command("Announce"), Description("DEBUG: Announces an audio file to all registered channels in the sender's guild")]
+        [Command("Announce"), Hidden, Description("DEBUG: Announces an audio file to all registered channels in the sender's guild")]
         public async Task Announce(CommandContext ctx, [RemainingText, Description("path to the file to play.")] string filename)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
@@ -248,7 +247,7 @@ namespace KoekoeBot
             }
             else
             {
-                await ctx.RespondAsync($"{alias} is already taken by another sample");
+                await ctx.RespondAsync($"{alias} is already taken by another sample: {handler.getSample(alias).Name}");
             }
         }
 
@@ -403,7 +402,7 @@ namespace KoekoeBot
         }
 
         //Used for debugging the voicenext and ffmpeg stuff
-        [Command("play"), Description("DEBUG: Plays an audio file.")]
+        [Command("play"), Hidden, Description("DEBUG: Plays an audio file.")]
         public async Task Play(CommandContext ctx, [RemainingText, Description("path to the file to play.")] string filename)
         {
             // get member's voice state

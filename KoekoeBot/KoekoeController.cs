@@ -48,14 +48,11 @@ namespace KoekoeBot
                 Directory.CreateDirectory(data_path);
             }
 
-            // first, let's load our configuration file
             var json = "";
             using (var fs = File.OpenRead("volume/config.json"))
             using (var sr = new StreamReader(fs, new UTF8Encoding(false)))
                 json = await sr.ReadToEndAsync();
 
-            // next, let's load the values from that file
-            // to our client's configuration
             var cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
             var cfg = new DiscordConfiguration
             {
@@ -66,16 +63,12 @@ namespace KoekoeBot
                 MinimumLogLevel = LogLevel.Debug,
             };
 
-            // then we want to instantiate our client
             Client = new DiscordClient(cfg);
 
-            // next, let's hook some events, so we know
-            // what's going on
             Client.Ready += Client_Ready;
             Client.GuildAvailable += Client_GuildAvailable; ;
             Client.ClientErrored += Client_ClientError;
 
-            // up next, let's set up our commands
             var ccfg = new CommandsNextConfiguration
             {
                 // let's use the string prefix defined in config.json
@@ -85,21 +78,15 @@ namespace KoekoeBot
                 EnableDms = true,
 
                 // enable mentioning the bot as a command prefix
-                EnableMentionPrefix = true
+                EnableMentionPrefix = true,
             };
-
-            // and hook them up
             Commands = Client.UseCommandsNext(ccfg);
 
-            // let's hook some command events, so we know what's 
-            // going on
             Commands.CommandExecuted += Commands_CommandExecuted;
             Commands.CommandErrored += Commands_CommandErrored;
 
-            // up next, let's register our commands
             Commands.RegisterCommands<KoekoeCommands>();
 
-            // let's enable voice
             Voice = Client.UseVoiceNext();
 
             await Client.ConnectAsync();
