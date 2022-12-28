@@ -271,7 +271,7 @@ namespace KoekoeBot
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<SampleData> samples = handler.GetGuildData().samples
-                .Where(x => x.enabled)
+                .Where(x => x.exists)
                 .Where(x => x.Name.Contains(searchQuery) || x.SampleAliases.Where(x => x.Contains(searchQuery)).Any())
                 .OrderBy((x) => int.Parse(x.SampleAliases[0]))
                 .ToList();
@@ -283,7 +283,7 @@ namespace KoekoeBot
             {
                 SampleData sample = samples[i];
 
-                content += $"{sample.SampleAliases[0]}. {sample.Name}: played {sample.PlayCount} times, Aliases: {String.Join(',', sample.SampleAliases)}\n";
+                content += $"{sample.SampleAliases[0]}. {sample.Name}\t|\t {sample.PlayCount} plays\t|\t Aliases: {String.Join(',', sample.SampleAliases.Skip(1))} \t|\t {(sample.enabled ? "ENABLED" : "DISABLED")}\n";
 
                 if (i >= max_rows) // Limit the number of rows in a single message
                 {
@@ -307,7 +307,7 @@ namespace KoekoeBot
         public async Task Samples(CommandContext ctx)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.enabled).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
+            List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.exists).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
 
             const int ROWS = 50;
             const int COLS = 2;
@@ -375,7 +375,7 @@ namespace KoekoeBot
         }
 
         [Command("p"), Description("Shortcut to play samples, use !kk samples command to see a list of available samples")]
-        public async Task p(CommandContext ctx, [RemainingText, Description("sample number from !kk samples command")] string sampleNumStr)
+        public async Task p(CommandContext ctx, [RemainingText, Description("sample number from !kk samples command")] string sampleNameOrAlias)
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
@@ -387,18 +387,16 @@ namespace KoekoeBot
 
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
 
-            int sampleNum = -1;
-            int.TryParse(sampleNumStr, out sampleNum);
-
-            if (sampleNum < 0 || sampleNum > handler.GetGuildData().samples.Count - 1)
-            {
-                await ctx.RespondAsync("Invalid sample number");
-                return;
+            SampleData sample = handler.getSample(sampleNameOrAlias);
+            if(sample != null && sample.enabled){
+                List<DiscordChannel> channels = new List<DiscordChannel>();
+                channels.Add(vstat.Channel);
+                await handler.AnnounceSample(sampleNameOrAlias, 1, channels); //each sample has it's sample number as an alias
+            } else {
+                await ctx.RespondAsync($"{sampleNameOrAlias} {(sample == null ? "does not exist" : "is disabled")} :(");
             }
-
-            List<DiscordChannel> channels = new List<DiscordChannel>();
-            channels.Add(vstat.Channel);
-            await handler.AnnounceSample(sampleNumStr, 1, channels); //each sample has it's sample number as an alias
+            
+            
         }
 
         //Used for debugging the voicenext and ffmpeg stuff

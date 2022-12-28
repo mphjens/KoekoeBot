@@ -7,6 +7,7 @@ namespace KoekoeBot
     public class SampleData
     {
         public string Name;
+        public bool exists;
         public bool enabled;
         public DateTime DateAdded;
         public int PlayCount;
