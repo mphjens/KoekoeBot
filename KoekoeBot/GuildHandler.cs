@@ -195,7 +195,8 @@ namespace KoekoeBot
             //This loop ticks every new minute on the systemclock
             while (ShouldRun)
             {
-                DateTime now = DateTime.Now;
+                DateTime now = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
+                DateTime.UtcNow, "W. Europe Standard Time"); // TODO: make this configurable
 
                 int alarmCountStart = alarms.Count;
                 //Check if we need to trigger an alarm
