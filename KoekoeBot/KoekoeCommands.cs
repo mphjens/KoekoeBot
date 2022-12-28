@@ -284,7 +284,7 @@ namespace KoekoeBot
                 // SampleData sample = samples[i];
 
                 // content += $"{sample.SampleAliases[0]}. {sample.Name}\t|\t {sample.PlayCount} plays\t|\t Aliases: {String.Join(',', sample.SampleAliases.Skip(1))} \t|\t {(sample.enabled ? "ENABLED" : "DISABLED")}\n";
-                StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Skip(i).Take(max_rows).Select(x=> new string[] {x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',',x.SampleAliases.Skip(1)), x.enabled.ToString()}).ToArray(), new string[] {"Id", "PlayCount", "Aliases", "Enabled"});
+                StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Skip(i).Take(max_rows).Select(x=> new string[] {x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',',x.SampleAliases.Skip(1)), x.enabled.ToString()}).ToArray(), new string[] {"Id", "Name", "PlayCount", "Aliases", "Enabled"});
                 
                 builder.Content = $"```Koekoe search result:\n\n{tableBuilder.ToString()}```";
                 await builder.SendAsync(ctx.Channel);
