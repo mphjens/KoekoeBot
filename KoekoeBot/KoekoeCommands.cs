@@ -193,7 +193,7 @@ namespace KoekoeBot
                     string samplepath = Path.Join(handler.getSampleBasePath(), handler.getFileNameForSampleName(samplename));
                     using (var client = new WebClient())
                     {
-                        client.DownloadFile(new System.Uri(ctx.Message.Attachments[0].ProxyUrl), $"{samplepath}.mp3");
+                        client.DownloadFile(new System.Uri(ctx.Message.Attachments[0].ProxyUrl), $"{samplepath}");
                     }
 
                     SampleData sample = handler.AddSampleFromFile(samplepath, samplename);
