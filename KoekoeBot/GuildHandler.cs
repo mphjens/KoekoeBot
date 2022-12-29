@@ -191,6 +191,7 @@ namespace KoekoeBot
 
         public async Task Execute()
         {
+            Console.WriteLine($"Executing timekeeper loop for {this.guildData.guildName}");
             IsRunning = true;
             ShouldRun = true;
 
