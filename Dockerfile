@@ -9,7 +9,10 @@ WORKDIR /app
 # Our ci pipeline places the build in the ./out directory
 COPY ./dist .
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install tzdata
+RUN apt-get update && \
+    apt-get install -yq tzdata && \
+    ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata
 
 # we need ffmpeg to play the audio samples libopus and libsodium for discord voice
 RUN DEBIAN_FRONTEND=noninteractive apt-get update
