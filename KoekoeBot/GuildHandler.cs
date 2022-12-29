@@ -198,9 +198,7 @@ namespace KoekoeBot
             //This loop ticks every new minute on the systemclock
             while (ShouldRun)
             {
-                DateTime now = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
-                DateTime.UtcNow, "W. Europe Standard Time"); // TODO: make this configurable
-
+                DateTime now = DateTime.Now;
                 Console.WriteLine($"TIME: {now.Hour}:{now.Minute}");
 
                 int alarmCountStart = alarms.Count;

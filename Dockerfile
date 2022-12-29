@@ -8,15 +8,15 @@ FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-bionic
 WORKDIR /app
 # Our ci pipeline places the build in the ./out directory
 COPY ./dist .
+RUN DEBIAN_FRONTEND=noninteractive apt-get update
 
-RUN apt-get update && \
-    apt-get install -yq tzdata && \
+RUN apt-get install -yq tzdata && \
     ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
-# we need ffmpeg to play the audio samples libopus and libsodium for discord voice
-RUN DEBIAN_FRONTEND=noninteractive apt-get update
+# we need ffmpeg to play the audio samples, libopus and libsodium for discord voice
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg libopus-dev libsodium-dev 
+
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 
 # websocket server is running on port 3941
