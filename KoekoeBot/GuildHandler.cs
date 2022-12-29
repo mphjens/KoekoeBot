@@ -199,7 +199,6 @@ namespace KoekoeBot
             while (ShouldRun)
             {
                 DateTime now = DateTime.Now;
-                Console.WriteLine($"TIME: {now.Hour}:{now.Minute}");
 
                 int alarmCountStart = alarms.Count;
                 //Check if we need to trigger an alarm
