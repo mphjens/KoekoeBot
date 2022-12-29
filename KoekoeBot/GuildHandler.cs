@@ -250,13 +250,14 @@ namespace KoekoeBot
                         await AnnounceFile(extraClipFiles[clipIndex]);
 
                     //Determine when we next will play a bonusclip (from minBonusInterval up to minBonusInterval + variableBonusInterval minutes)
-                    nextBonusClip = DateTime.Now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
+                    
+                    nextBonusClip = now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
                     System.Console.WriteLine($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name} which will be played at {nextBonusClip.ToShortTimeString()}");
                 }
 
                 //System.Console.WriteLine($"Guildhandler has ticked {Guild.Name}");
                 //Calculate the number of miliseconds until a new minute on the system clock (fix? add one second to account for task.delay() inaccuracy)
-                double millisToNextMinute = (double)((60 * 1000) - DateTime.Now.TimeOfDay.TotalMilliseconds % (60 * 1000));
+                double millisToNextMinute = (double)((60 * 1000) - now.TimeOfDay.TotalMilliseconds % (60 * 1000));
 
                 await Task.Delay((int)millisToNextMinute + 1000);
             }
