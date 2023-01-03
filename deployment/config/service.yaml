@@ -5,9 +5,10 @@ metadata:
     app: ${APP_NAME}
   name: ${APP_NAME}-service
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
-    - name: "3941"
+    - name: websocket
+      protocol: TCP
       port: 3941
       targetPort: 3941
   selector:
