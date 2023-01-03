@@ -30,8 +30,9 @@ spec:
           - path: /websocket
             pathType: Exact
             backend:
-              serviceName: ${APP_NAME}-service
-              servicePort: 3941
+              name: ${APP_NAME}-service
+              port: 
+                number: 3941
 # https://www.civo.com/learn/using-websockets-with-ingress-controller
 # The part in nginx.ingress.kubernetes.io/server-snippets is what actually upgrades the connection for use with websockets.
 ---
