@@ -27,7 +27,7 @@ spec:
     - host: vossnack.nl
       http:
         paths:
-          - path: /websocket
+          - path: /koekoe/websocket
             pathType: Exact
             backend:
               service:
