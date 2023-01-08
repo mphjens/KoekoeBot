@@ -178,6 +178,7 @@ namespace KoekoeBot
 
             channels = await handler.GetChannels(cmd.channelIds?.ToList());
 
+            Console.WriteLine($"executing '{cmd.type}' command from {wsEvent.clientBaseUrl}");
             switch(cmd.type)
             {
                 case KoekoeWebsocketCommand.WebsocketCommandType.PlayFile:
@@ -192,6 +193,7 @@ namespace KoekoeBot
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetGuilds:
                     string payload = JsonConvert.SerializeObject(getGuilds());
                     wsServer.SendTextMessage(payload);
+                    Console.WriteLine($"sent {payload} over websocket");
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetChannels:
                     wsServer.SendTextMessage(JsonConvert.SerializeObject(await getChannels(cmd.GuildId)), wsEvent.clientId);
@@ -200,8 +202,6 @@ namespace KoekoeBot
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetSamples:
                     wsServer.SendTextMessage(JsonConvert.SerializeObject(getSamples(cmd.GuildId)), wsEvent.clientId);
                     break;
-
-
                 default: throw new ArgumentOutOfRangeException(nameof(cmd.type), cmd.type, "Unknown websocket command type");
             }
 
