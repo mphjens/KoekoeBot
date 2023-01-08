@@ -44,7 +44,7 @@ namespace KoekoeBot
 
     public class KoekoeDiscordId
     {
-        public ulong Id;
+        public string Id;
         public string Name;
     }
 

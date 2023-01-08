@@ -225,7 +225,7 @@ namespace KoekoeBot
         {
             var retval = new KoekoeDiscordIdList();
             retval.type = KoekoeDiscordIdList.KoekoeIdListType.Channels;
-            retval.items = (await _instances[guildid].GetChannels(_instances[guildid].ChannelIds)).Select(x=>new KoekoeDiscordId { Id = x.Id, Name = x.Name }).ToArray();
+            retval.items = (await _instances[guildid].GetChannels(_instances[guildid].ChannelIds)).Select(x=>new KoekoeDiscordId { Id = x.Id.ToString(), Name = x.Name }).ToArray();
             return retval;
         }
 
@@ -233,7 +233,7 @@ namespace KoekoeBot
         {
             var retval = new KoekoeDiscordIdList();
             retval.type = KoekoeDiscordIdList.KoekoeIdListType.Samples;
-            retval.items = _instances[guildid].GetGuildData().samples.Select((x, i) => new KoekoeDiscordId { Id = ulong.Parse(x.SampleAliases[0]), Name = x.Name }).ToArray();
+            retval.items = _instances[guildid].GetGuildData().samples.Select((x, i) => new KoekoeDiscordId { Id = x.SampleAliases[0], Name = x.Name }).ToArray();
             return retval;
         }
 

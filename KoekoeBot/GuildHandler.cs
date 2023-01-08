@@ -458,7 +458,7 @@ namespace KoekoeBot
 
         public KoekoeDiscordId getDiscordId()
         {
-            return new KoekoeDiscordId() { Id = this.Guild.Id, Name = this.Guild.Name };
+            return new KoekoeDiscordId() { Id = this.Guild.Id.ToString(), Name = this.Guild.Name };
         }
 
         private string getFileNameForHour(int hour)
