@@ -175,7 +175,7 @@ namespace KoekoeBot
                 Console.WriteLine($"got '{cmd.type}' command for unknown guildid {cmd.GuildId}");
                 return false;
             }
-
+            Console.WriteLine($"getting channels");
             channels = await handler.GetChannels(cmd.channelIds?.ToList());
 
             Console.WriteLine($"executing '{cmd.type}' command from {wsEvent.clientBaseUrl}");
