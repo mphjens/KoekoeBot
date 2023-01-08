@@ -170,7 +170,7 @@ namespace KoekoeBot
         {
             GuildHandler handler = null;
             List<DiscordChannel> channels = null;
-            Console.WriteLine($"guilds: '{_instances.Keys}'");
+            Console.WriteLine($"guilds: '{String.Join(',',_instances.Keys)}'");
             if (cmd.type != KoekoeWebsocketCommand.WebsocketCommandType.GetGuilds && !_instances.TryGetValue(cmd.GuildId, out handler))
             {
                 Console.WriteLine($"got '{cmd.type}' command for unknown guildid {cmd.GuildId}");
