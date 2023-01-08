@@ -77,7 +77,7 @@ namespace KoekoeBot
             if (args.data != null && args.isText)
             {
                 string received = Encoding.UTF8.GetString(args.data);
-                websocketServer.SendTextMessage("Client: " + args.clientId + " on url: " + args.clientBaseUrl + ", says: " + received);
+                // websocketServer.SendTextMessage("Client: " + args.clientId + " on url: " + args.clientBaseUrl + ", says: " + received);
                 Console.WriteLine("Got ws message: " + received);
                 try
                 {
