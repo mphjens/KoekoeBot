@@ -229,7 +229,7 @@ namespace KoekoeBot
             return retval;
         }
 
-        public static async Task<KoekoeDiscordIdList> getSamples(ulong guildid)
+        public static KoekoeDiscordIdList getSamples(ulong guildid)
         {
             var retval = new KoekoeDiscordIdList();
             retval.type = KoekoeDiscordIdList.KoekoeIdListType.Samples;
