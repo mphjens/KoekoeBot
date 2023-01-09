@@ -234,6 +234,7 @@ namespace KoekoeBot
                 if (now.Minute == 0) //If we entered a new hour
                 {
                     System.Console.WriteLine($"Guildhandler for {this.guildData.guildName} entered new hour: {now.Hour}");
+                    this.SaveGuildData();
                     await AnnounceFile(getFileNameForHour(now.Hour));
                 }
 
@@ -275,7 +276,7 @@ namespace KoekoeBot
 
             guildSample.PlayCount++;
 
-            this.SaveGuildData();
+            
 
             await this.AnnounceFile(getSampleFilePath(guildSample), loopcount, channels);
         }
