@@ -22,7 +22,7 @@ spec:
   tls:
     - hosts:
         - vossnack.nl
-      secretName: tekton-webhook-ingres-ssecret #TODO: hmm..
+      secretName: vossnack-nl-tls
   rules:
     - host: vossnack.nl
       http:
@@ -35,5 +35,5 @@ spec:
                 port: 
                   number: 3941
 # https://www.civo.com/learn/using-websockets-with-ingress-controller
-# The part in nginx.ingress.kubernetes.io/server-snippets is what actually upgrades the connection for use with websockets.
+# The part in nginx.ingress.kubernetes.io/server-snippets is what actually upgrades the connection to use the wss protocol 
 ---
