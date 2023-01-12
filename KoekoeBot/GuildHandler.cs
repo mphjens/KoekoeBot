@@ -36,6 +36,8 @@ namespace KoekoeBot
         private DiscordClient Client;
         private bool ShouldRun;
 
+        private List<DiscordChannel> cachedChannels;
+
         private SavedGuildData guildData;
 
         List<AlarmData> alarms;
@@ -163,8 +165,25 @@ namespace KoekoeBot
             {
                 channels.Add(await Client.GetChannelAsync(channelid));
             }
+
+            this.cachedChannels = channels;
             return channels;
         }
+        
+        public List<DiscordChannel> GetChannelsCached(List<ulong> ids)
+        {
+            if (ids == null)
+                return null;
+
+            var channels = new List<DiscordChannel>();
+            foreach (var channelid in ids)
+            {
+                channels.Add(cachedChannels.Where(x=>x.Id == channelid).FirstOrDefault());
+            }
+
+            return channels;
+        }
+
         public string getSampleBasePath()
         {
             return $"volume/samples/{this.Guild.Id}";
