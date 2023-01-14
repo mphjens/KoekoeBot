@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using SimpleWebSocketServerLibrary;
+using WatsonWebsocket;
 
 namespace KoekoeBot
 {
@@ -52,7 +52,7 @@ namespace KoekoeBot
     {
         bool serving = false;
         ConcurrentQueue<KoekoeWebsocketCommand> queue;
-        SimpleWebSocketServer websocketServer;
+        WatsonWsServer websocketServer;
 
         public WebsocketInterface(ref ConcurrentQueue<KoekoeWebsocketCommand> queue)
         {
@@ -62,28 +62,29 @@ namespace KoekoeBot
         public async Task<bool> Serve()
         {
             serving = true;
-            websocketServer = new SimpleWebSocketServer(new SimpleWebSocketServerSettings { port = 3941 });
-            websocketServer.WebsocketServerEvent += WebsocketServer_WebsocketServerEvent;
+            websocketServer = new WatsonWsServer("localhost", 3941, true);
+            //websocketServer.ClientConnected += ClientConnected;
+            //websocketServer.ClientDisconnected += ClientDisconnected;
+            websocketServer.MessageReceived += MessageReceived; 
 
-            websocketServer.StartServer();
+            websocketServer.Start();
 
             serving = false;
 
             return true;
         }
 
-        private void WebsocketServer_WebsocketServerEvent(object sender, WebSocketEventArg args)
-        {
-            if (args.data != null && args.isText)
+        private void MessageReceived(object sender, MessageReceivedEventArgs args) {
+            if (args.Data != null)
             {
-                string received = Encoding.UTF8.GetString(args.data);
+                string received = Encoding.UTF8.GetString(args.Data);
                 // websocketServer.SendTextMessage("Client: " + args.clientId + " on url: " + args.clientBaseUrl + ", says: " + received);
                 Console.WriteLine("Got ws message: " + received);
                 try
                 {
                     var cmd = JsonConvert.DeserializeObject<KoekoeWebsocketCommand>(received);
                     Console.WriteLine($"received '{cmd.type}' command from {sender.ToString()}");
-                    KoekoeController.HandleWebsocketCommand(cmd, this.websocketServer, args);
+                    KoekoeController.HandleWebsocketCommand(cmd, this.websocketServer, );
                 }
                 catch (Exception ex)
                 {
