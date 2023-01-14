@@ -62,7 +62,7 @@ namespace KoekoeBot
         public async Task<bool> Serve()
         {
             serving = true;
-            websocketServer = new WatsonWsServer("localhost", 3941, true);
+            websocketServer = new WatsonWsServer("0.0.0.0", 3941, true);
             //websocketServer.ClientConnected += ClientConnected;
             //websocketServer.ClientDisconnected += ClientDisconnected;
             websocketServer.MessageReceived += MessageReceived; 
