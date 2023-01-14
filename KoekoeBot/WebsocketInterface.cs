@@ -4,7 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using WatsonWebsocket;
+using SimpleWebSocketServerLibrary;
 
 namespace KoekoeBot
 {
@@ -52,7 +52,7 @@ namespace KoekoeBot
     {
         bool serving = false;
         ConcurrentQueue<KoekoeWebsocketCommand> queue;
-        WatsonWsServer websocketServer;
+        SimpleWebSocketServer websocketServer;
 
         public WebsocketInterface(ref ConcurrentQueue<KoekoeWebsocketCommand> queue)
         {
@@ -62,22 +62,21 @@ namespace KoekoeBot
         public async Task<bool> Serve()
         {
             serving = true;
-            websocketServer = new WatsonWsServer("localhost", 3941, false);
-            //websocketServer.ClientConnected += ClientConnected;
-            //websocketServer.ClientDisconnected += ClientDisconnected;
-            websocketServer.MessageReceived += MessageReceived; 
+            websocketServer = new SimpleWebSocketServer(new SimpleWebSocketServerSettings { port = 3941});
+            websocketServer.WebsocketServerEvent += WebsocketServer_WebsocketServerEvent;
 
-            await websocketServer.StartAsync();
+            websocketServer.StartServer();
 
             serving = false;
 
             return true;
         }
 
-        private void MessageReceived(object sender, MessageReceivedEventArgs args) {
-            if (args.Data != null)
+        private void WebsocketServer_WebsocketServerEvent(object sender, WebSocketEventArg args)
+        {
+            if (args.data != null && args.isText)
             {
-                string received = Encoding.UTF8.GetString(args.Data);
+                string received = Encoding.UTF8.GetString(args.data);
                 // websocketServer.SendTextMessage("Client: " + args.clientId + " on url: " + args.clientBaseUrl + ", says: " + received);
                 Console.WriteLine("Got ws message: " + received);
                 try

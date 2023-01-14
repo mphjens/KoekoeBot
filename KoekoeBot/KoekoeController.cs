@@ -13,7 +13,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
-using WatsonWebsocket;
+using SimpleWebSocketServerLibrary;
 
 namespace KoekoeBot
 {
@@ -166,7 +166,7 @@ namespace KoekoeBot
             return Task.CompletedTask;
         }
 
-        public static async Task<bool> HandleWebsocketCommand(KoekoeWebsocketCommand cmd, WatsonWsServer wsServer, MessageReceivedEventArgs wsEvent)
+        public static async Task<bool> HandleWebsocketCommand(KoekoeWebsocketCommand cmd, SimpleWebSocketServer wsServer, WebSocketEventArg wsEvent)
         {
             GuildHandler handler = null;
             List<DiscordChannel> channels = null;
@@ -183,7 +183,7 @@ namespace KoekoeBot
             }
             
 
-            Console.WriteLine($"executing '{cmd.type}' command from {wsEvent.Client.Guid} on {wsEvent.Client.Ip}");
+            Console.WriteLine($"executing '{cmd.type}' command from {wsEvent.clientBaseUrl}");
             switch(cmd.type)
             {
                 case KoekoeWebsocketCommand.WebsocketCommandType.PlayFile:
@@ -197,15 +197,15 @@ namespace KoekoeBot
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetGuilds:
                     string payload = JsonConvert.SerializeObject(getGuilds());
-                    await wsServer.SendAsync(wsEvent.Client.Guid, payload);
+                    wsServer.SendTextMessage(payload);
                     Console.WriteLine($"sent {payload} over websocket");
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetChannels:
-                    await wsServer.SendAsync(wsEvent.Client.Guid, JsonConvert.SerializeObject(await getChannelsCached(cmd.GuildId)));
+                    wsServer.SendTextMessage(JsonConvert.SerializeObject(await getChannelsCached(cmd.GuildId)), wsEvent.clientId);
                     break;
 
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetSamples:
-                    await wsServer.SendAsync(wsEvent.Client.Guid, JsonConvert.SerializeObject(getSamples(cmd.GuildId)));
+                    wsServer.SendTextMessage(JsonConvert.SerializeObject(getSamples(cmd.GuildId)), wsEvent.clientId);
                     break;
                 default: throw new ArgumentOutOfRangeException(nameof(cmd.type), cmd.type, "Unknown websocket command type");
             }
