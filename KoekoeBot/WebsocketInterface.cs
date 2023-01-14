@@ -67,7 +67,7 @@ namespace KoekoeBot
             //websocketServer.ClientDisconnected += ClientDisconnected;
             websocketServer.MessageReceived += MessageReceived; 
 
-            websocketServer.Start();
+            await websocketServer.StartAsync();
 
             serving = false;
 
