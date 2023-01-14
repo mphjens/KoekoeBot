@@ -84,7 +84,7 @@ namespace KoekoeBot
                 {
                     var cmd = JsonConvert.DeserializeObject<KoekoeWebsocketCommand>(received);
                     Console.WriteLine($"received '{cmd.type}' command from {sender.ToString()}");
-                    KoekoeController.HandleWebsocketCommand(cmd, this.websocketServer, );
+                    KoekoeController.HandleWebsocketCommand(cmd, this.websocketServer, args);
                 }
                 catch (Exception ex)
                 {
