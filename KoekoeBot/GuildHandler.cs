@@ -52,6 +52,8 @@ namespace KoekoeBot
             this.Guild = guild;
             this.rnd = new Random();
 
+            this.cachedChannels = new Dictionary<ulong, DiscordChannel>();
+
             alarms = new List<AlarmData>();
         }
 
@@ -167,11 +169,9 @@ namespace KoekoeBot
                 channels.Add(ch);
                 this.cachedChannels[ch.Id] = ch; 
             }
-
             
             return channels;
         }
-        
 
         //Gets 
         public async Task<List<DiscordChannel>> GetChannelsCached(List<ulong> ids)
