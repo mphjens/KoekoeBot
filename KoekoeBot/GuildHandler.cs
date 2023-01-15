@@ -312,7 +312,7 @@ namespace KoekoeBot
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
             if (channels == null)
-                channels = (await GetChannels(this.ChannelIds));
+                channels = (await GetChannelsCached(this.ChannelIds));
 
             if (!File.Exists(audio_path))
             {
@@ -379,8 +379,11 @@ namespace KoekoeBot
                         var ffout = ffmpeg.StandardOutput.BaseStream;
 
                         var txStream = vnc.GetTransmitSink();
+                        Console.WriteLine("CopyToAsync");
                         await ffout.CopyToAsync(txStream);
+                        Console.WriteLine("FlushAsync");
                         await txStream.FlushAsync();
+                        Console.WriteLine("WaitForPlaybackFinishAsync");
                         await vnc.WaitForPlaybackFinishAsync();
                     }
 
