@@ -158,8 +158,8 @@ namespace SimpleWebSocketServerLibrary.SimpleWebSocketHttpServer
                 string baseUrl = CheckIfBaseUrl(baseUrlDecoded);
                 string customId = CheckIfCustomIdIsSet(baseUrl, baseUrlDecoded);
 
-                System.Console.WriteLine($"baseUrlEncoded: {baseUrlEncoded}");
-                System.Console.WriteLine($"received:\n{received}");
+                // System.Console.WriteLine($"baseUrlEncoded: {baseUrlEncoded}");
+                // System.Console.WriteLine($"received:\n{received}");
 
                 if (received.Contains("Sec-WebSocket-Key:") && baseUrl != null)
                 {

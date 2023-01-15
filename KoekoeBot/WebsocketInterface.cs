@@ -64,11 +64,7 @@ namespace KoekoeBot
         {
             serving = true;
             List<string> baseUrls = new List<string>();
-            baseUrls.Add("vossnack.nl");
-            baseUrls.Add("localhost");
-            baseUrls.Add("");
             baseUrls.Add("/");
-            baseUrls.Add("/koekoe/websocket");
 
             websocketServer = new SimpleWebSocketServer(new SimpleWebSocketServerSettings { port = 3941, baseUrls = baseUrls });
             websocketServer.WebsocketServerEvent += WebsocketServer_WebsocketServerEvent;
