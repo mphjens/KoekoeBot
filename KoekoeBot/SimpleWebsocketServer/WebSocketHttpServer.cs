@@ -143,7 +143,7 @@ namespace SimpleWebSocketServerLibrary.SimpleWebSocketHttpServer
 
             TcpListener tcpListener = new TcpListener(IPAddress.Any, _Port);
             tcpListener.Start();
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[16384];
             _Stop = false;
             while (!_Stop)
             {
