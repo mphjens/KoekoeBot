@@ -392,6 +392,7 @@ namespace KoekoeBot
                 catch (Exception ex) { Console.Write(ex.StackTrace); }
                 finally
                 {
+                    Console.WriteLine("Finally; SendSpeakingAsync");
                     await vnc.SendSpeakingAsync(false);
                     vnext.GetConnection(Channel.Guild).Disconnect();
                 }
