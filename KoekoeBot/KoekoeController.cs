@@ -201,7 +201,7 @@ namespace KoekoeBot
                     Console.WriteLine($"sent {payload} over websocket");
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetChannels:
-                    wsServer.SendTextMessage(JsonConvert.SerializeObject(await getChannelsCached(cmd.GuildId)), wsEvent.clientId);
+                    wsServer.SendTextMessage(JsonConvert.SerializeObject(await getChannels(cmd.GuildId)), wsEvent.clientId);
                     break;
 
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetSamples:
@@ -221,19 +221,16 @@ namespace KoekoeBot
             return retval;
         }
 
-        public static async Task<KoekoeDiscordIdList> getChannels(ulong guildid)
+        public static async Task<KoekoeDiscordIdList> getChannels(ulong guildid, bool noCache = false)
         {
             var retval = new KoekoeDiscordIdList();
             retval.type = KoekoeDiscordIdList.KoekoeIdListType.Channels;
-            retval.items = (await _instances[guildid].GetChannels(_instances[guildid].ChannelIds)).Select(x=>new KoekoeDiscordId { Id = x.Id.ToString(), Name = x.Name }).ToArray();
-            return retval;
-        }
-
-        public static async Task<KoekoeDiscordIdList> getChannelsCached(ulong guildid)
-        {
-            var retval = new KoekoeDiscordIdList();
-            retval.type = KoekoeDiscordIdList.KoekoeIdListType.Channels;
-            retval.items = _instances[guildid].GetChannelsCached(_instances[guildid].ChannelIds).Select(x=>new KoekoeDiscordId { Id = x.Id.ToString(), Name = x.Name }).ToArray();
+            if(noCache) {
+                retval.items = (await _instances[guildid].GetChannels(_instances[guildid].ChannelIds)).Select(x=>new KoekoeDiscordId { Id = x.Id.ToString(), Name = x.Name }).ToArray();
+            } else {
+                 retval.items = (await _instances[guildid].GetChannelsCached(_instances[guildid].ChannelIds)).Select(x=>new KoekoeDiscordId { Id = x.Id.ToString(), Name = x.Name }).ToArray();
+            }
+            
             return retval;
         }
 

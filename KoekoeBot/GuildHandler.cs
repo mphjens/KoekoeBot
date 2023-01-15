@@ -36,7 +36,7 @@ namespace KoekoeBot
         private DiscordClient Client;
         private bool ShouldRun;
 
-        private List<DiscordChannel> cachedChannels;
+        private Dictionary<ulong, DiscordChannel> cachedChannels;
 
         private SavedGuildData guildData;
 
@@ -163,22 +163,30 @@ namespace KoekoeBot
             var channels = new List<DiscordChannel>();
             foreach (var channelid in ids)
             {
-                channels.Add(await Client.GetChannelAsync(channelid));
+                DiscordChannel ch = await Client.GetChannelAsync(channelid);
+                channels.Add(ch);
+                this.cachedChannels[ch.Id] = ch; 
             }
 
-            this.cachedChannels = channels;
+            
             return channels;
         }
         
-        public List<DiscordChannel> GetChannelsCached(List<ulong> ids)
+
+        //Gets 
+        public async Task<List<DiscordChannel>> GetChannelsCached(List<ulong> ids)
         {
             if (ids == null)
                 return null;
-
+            
+            List<ulong> uncachedIds = ids.Where(id=>!this.cachedChannels.ContainsKey(id)).ToList();
+            if(uncachedIds.Count() > 0)
+                await GetChannels(uncachedIds); // Puts these channels in the cache so we dont need the return value
+            
             var channels = new List<DiscordChannel>();
             foreach (var channelid in ids)
             {
-                channels.Add(cachedChannels.Where(x=>x.Id == channelid).FirstOrDefault());
+                channels.Add(cachedChannels.GetValueOrDefault(channelid));
             }
 
             return channels;
