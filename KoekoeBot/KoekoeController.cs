@@ -197,7 +197,7 @@ namespace KoekoeBot
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetGuilds:
                     string payload = JsonConvert.SerializeObject(getGuilds());
-                    wsServer.SendTextMessage(payload);
+                    wsServer.SendTextMessage(payload, wsEvent.clientId);
                     Console.WriteLine($"sent {payload} over websocket");
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetChannels:
