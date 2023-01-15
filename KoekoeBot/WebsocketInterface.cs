@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -62,7 +63,14 @@ namespace KoekoeBot
         public async Task<bool> Serve()
         {
             serving = true;
-            websocketServer = new SimpleWebSocketServer(new SimpleWebSocketServerSettings { port = 3941});
+            List<string> baseUrls = new List<string>();
+            baseUrls.Add("vossnack.nl");
+            baseUrls.Add("localhost");
+            baseUrls.Add("");
+            baseUrls.Add("/");
+            baseUrls.Add("/koekoe/websocket");
+
+            websocketServer = new SimpleWebSocketServer(new SimpleWebSocketServerSettings { port = 3941, baseUrls = baseUrls });
             websocketServer.WebsocketServerEvent += WebsocketServer_WebsocketServerEvent;
 
             websocketServer.StartServer();
