@@ -281,6 +281,7 @@ namespace SimpleWebSocketServerLibrary.WSocketServer
             WebSocketEventArg messageArg = new WebSocketEventArg();
 
             bool isConnected = false;
+            int emptyMessageCount = 0; 
 
             while (_ClientInfo.client.Connected )
             {
@@ -303,8 +304,15 @@ namespace SimpleWebSocketServerLibrary.WSocketServer
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                     await stream.FlushAsync();
                     if(bytesRead == 0) {
+                        emptyMessageCount++;
                         Console.WriteLine($"Prevented handling of empty message. Stale buffer: {buffer}");
+                        if(emptyMessageCount == 10){
+                            _ClientInfo.client.Close(); //after x amount of empty messages kill the connection (TODO: find out where the empty messages are generated)
+                            break;
+                        }
                         continue;
+                    }else{
+                        emptyMessageCount = 0;
                     }
 
                     int opCode = buffer[0] & 0x0F;
