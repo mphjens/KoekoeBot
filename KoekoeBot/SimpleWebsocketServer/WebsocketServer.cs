@@ -300,9 +300,13 @@ namespace SimpleWebSocketServerLibrary.WSocketServer
                 }
                 if (stream.CanWrite && stream.CanRead)
                 {
-
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                     await stream.FlushAsync();
+                    if(bytesRead == 0) {
+                        Console.WriteLine($"Prevented handling of empty message. Stale buffer: {buffer}");
+                        continue;
+                    }
+
                     int opCode = buffer[0] & 0x0F;
                     bool finalMessage = ((buffer[0] & 0x80) == 0x80);
                     bool maskKey = ((buffer[1] & 0x80) == 0x80);
