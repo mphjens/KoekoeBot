@@ -9,6 +9,7 @@ using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using System.Threading;
 
 namespace KoekoeBot
 {
@@ -38,6 +39,9 @@ namespace KoekoeBot
 
         private Dictionary<ulong, DiscordChannel> cachedChannels;
 
+        private VoiceNextConnection cVoiceConnection = null;
+        private DebouncedAction debouncedLeave;
+        private static int LeaveAfterMs = 20000; //leave after 20seconds of inactivity
         private SavedGuildData guildData;
 
         List<AlarmData> alarms;
@@ -53,6 +57,12 @@ namespace KoekoeBot
             this.rnd = new Random();
 
             this.cachedChannels = new Dictionary<ulong, DiscordChannel>();
+
+            Action leaveAction = async () =>
+            {
+                await this.Leave();
+            };
+            this.debouncedLeave = leaveAction.Debounce(LeaveAfterMs);
 
             alarms = new List<AlarmData>();
         }
@@ -72,17 +82,21 @@ namespace KoekoeBot
             var data = this.guildData;
             data.samples = data.samples != null ? data.samples : new List<SampleData>();
 
-            foreach(SampleData sample in data.samples) {
-                if(!File.Exists(Path.Combine(getSampleBasePath(), sample.Filename))) {
+            foreach (SampleData sample in data.samples)
+            {
+                if (!File.Exists(Path.Combine(getSampleBasePath(), sample.Filename)))
+                {
                     Console.WriteLine($"disabling {sample.Name} because {sample.Filename} does not exist");
                     sample.exists = false;
-                } else {
+                }
+                else
+                {
                     sample.exists = true; // TODO: FIXME: we probably want to keep them disabled in some cases even if we have the file
                 }
             }
 
             string[] samplefiles = Directory.EnumerateFiles(Path.Combine(Environment.CurrentDirectory, getSampleBasePath())).Where(x => x.EndsWith(".mp3")).OrderBy(f => File.GetCreationTimeUtc(f)).ToArray();
-    
+
             //todo: first use slots where the sample file does not exsist anymore.
             //      this way the indecies of exsisting samples don't change when
             //      samples are removed from the list. For now appending new ones
@@ -104,10 +118,12 @@ namespace KoekoeBot
 
 
         // Make sure not to add duplicates (TODO: might want to add a guard to this method)
-        public SampleData AddSampleFromFile(string filepath, string samplename = null){
+        public SampleData AddSampleFromFile(string filepath, string samplename = null)
+        {
             string name = samplename != null ? samplename : sampleNameFromFilename(filepath);
             SampleData existing = this.getSample(name);
-            if(existing != null){
+            if (existing != null)
+            {
                 Console.WriteLine($"WARN: {name} already exists in {this.guildData.guildName}");
                 return null;
             }
@@ -122,39 +138,42 @@ namespace KoekoeBot
             nSample.DateAdded = DateTime.UtcNow;
             nSample.exists = true;
             nSample.enabled = true;
-            
+
             this.guildData.samples.Add(nSample);
-            
+
             return nSample;
         }
 
-        public bool AddAlias(string samplename, string alias) {
+        public bool AddAlias(string samplename, string alias)
+        {
             SampleData existing = getSample(alias);
-            if(existing != null)
+            if (existing != null)
                 return false;
 
             SampleData sample = getSample(samplename);
             sample.SampleAliases.Add(alias);
-            
+
             this.SaveGuildData(false);
 
             return true;
         }
 
-        public bool RemoveAlias(string samplename, string alias) {
+        public bool RemoveAlias(string samplename, string alias)
+        {
             SampleData existing = getSample(alias);
-            if(existing == null)
+            if (existing == null)
                 return false;
 
             existing.SampleAliases.Remove(alias);
-            
+
             this.SaveGuildData(false);
 
             return true;
         }
 
-        public SampleData getSample(string nameOrAlias) {
-            return this.guildData.samples.Where(x=> x.Name == nameOrAlias || x.SampleAliases.Contains(nameOrAlias)).FirstOrDefault();
+        public SampleData getSample(string nameOrAlias)
+        {
+            return this.guildData.samples.Where(x => x.Name == nameOrAlias || x.SampleAliases.Contains(nameOrAlias)).FirstOrDefault();
         }
 
         public async Task<List<DiscordChannel>> GetChannels(List<ulong> ids)
@@ -167,22 +186,21 @@ namespace KoekoeBot
             {
                 DiscordChannel ch = await Client.GetChannelAsync(channelid);
                 channels.Add(ch);
-                this.cachedChannels[ch.Id] = ch; 
+                this.cachedChannels[ch.Id] = ch;
             }
-            
+
             return channels;
         }
 
-        //Gets 
         public async Task<List<DiscordChannel>> GetChannelsCached(List<ulong> ids)
         {
             if (ids == null)
                 return null;
-            
-            List<ulong> uncachedIds = ids.Where(id=>!this.cachedChannels.ContainsKey(id)).ToList();
-            if(uncachedIds.Count() > 0)
+
+            List<ulong> uncachedIds = ids.Where(id => !this.cachedChannels.ContainsKey(id)).ToList();
+            if (uncachedIds.Count() > 0)
                 await GetChannels(uncachedIds); // Puts these channels in the cache so we dont need the return value
-            
+
             var channels = new List<DiscordChannel>();
             foreach (var channelid in ids)
             {
@@ -213,7 +231,7 @@ namespace KoekoeBot
 
         public string getFileNameForSampleName(string samplename)
         {
-            return $"{string.Join("-",$"extra_{samplename.Replace(' ', '_')}".Split(Path.GetInvalidFileNameChars()))}.mp3";
+            return $"{string.Join("-", $"extra_{samplename.Replace(' ', '_')}".Split(Path.GetInvalidFileNameChars()))}.mp3";
         }
 
         public async Task Execute()
@@ -276,7 +294,7 @@ namespace KoekoeBot
                         await AnnounceFile(extraClipFiles[clipIndex]);
 
                     //Determine when we next will play a bonusclip (from minBonusInterval up to minBonusInterval + variableBonusInterval minutes)
-                    
+
                     nextBonusClip = now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
                     System.Console.WriteLine($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name} which will be played at {nextBonusClip.ToShortTimeString()}");
                 }
@@ -303,16 +321,66 @@ namespace KoekoeBot
 
             guildSample.PlayCount++;
 
-            
-
             await this.AnnounceFile(getSampleFilePath(guildSample), loopcount, channels);
+        }
+
+        public async Task<VoiceNextConnection> JoinWithVoice(DiscordChannel channel)
+        {
+            if (cVoiceConnection != null && cVoiceConnection.TargetChannel.Id == channel.Id)
+            {
+                return this.cVoiceConnection;
+            }
+            else
+            {
+                if (cVoiceConnection != null)
+                {
+                    await this.Leave(this.cVoiceConnection);
+                }
+            }
+
+            // check whether VNext is enabled
+            var vnext = Client.GetVoiceNext();
+            if (vnext == null)
+            {
+                System.Console.WriteLine("VoiceNext not configured");
+                return null;
+            }
+
+            // check whether we aren't already connected
+            var vnc = vnext.GetConnection(channel.Guild);
+            if (vnc != null)
+            {
+                System.Console.WriteLine("Already connected in this guild.");
+                return null;
+            }
+
+            // connect
+            vnc = await vnext.ConnectAsync(channel);
+
+            this.cVoiceConnection = vnc;
+
+            return vnc;
+        }
+
+        public async Task Leave(VoiceNextConnection channelConnection = null)
+        {
+            channelConnection = channelConnection != null ? channelConnection : this.cVoiceConnection;
+
+            if (channelConnection != null)
+            {
+                var vnext = Client.GetVoiceNext();
+                await channelConnection.SendSpeakingAsync(false);
+                vnext.GetConnection(channelConnection.TargetChannel.Guild).Disconnect();
+
+                this.cVoiceConnection = null;
+            }
         }
 
         //Joins, plays audio file and leaves again. for all registered channels in this guild
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
             if (channels == null)
-                channels = (await GetChannelsCached(this.ChannelIds));
+                channels = (await GetChannels(this.ChannelIds));
 
             if (!File.Exists(audio_path))
             {
@@ -320,32 +388,24 @@ namespace KoekoeBot
                 return;
             }
 
-            foreach (DiscordChannel Channel in channels)
+            foreach (DiscordChannel channel in channels)
             {
-                if (Channel.Users.Count() == 0)
+                if (channel.Users.Count() == 0)
                 {
-                    System.Console.WriteLine($"Will not be playing {audio_path} in {Channel.Guild.Name}/{Channel.Name} (no users online)");
+                    System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (no users online)");
                     continue; //skip empty channels
                 }
+                
+                var vnc = await JoinWithVoice(channel);
 
-                // check whether VNext is enabled
-                var vnext = Client.GetVoiceNext();
-                if (vnext == null)
+                this.debouncedLeave.cts.Cancel(); // refresh the debounced leave action so we don't leave mid sample
+                this.debouncedLeave.action();
+
+                if (vnc == null)
                 {
-                    System.Console.WriteLine("VoiceNext not configured");
-                    return;
+                    System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (problem joining the channel)");
+                    continue;
                 }
-
-                // check whether we aren't already connected
-                var vnc = vnext.GetConnection(Channel.Guild);
-                if (vnc != null)
-                {
-                    System.Console.WriteLine("Already connected in this guild.");
-                    return;
-                }
-
-                // connect
-                vnc = await vnext.ConnectAsync(Channel);
 
                 try
                 {
@@ -370,7 +430,7 @@ namespace KoekoeBot
 
                     };
 
-                    System.Console.WriteLine($"Playing {audio_path} in {Channel.Guild.Name}/{Channel.Name}");
+                    System.Console.WriteLine($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
                     //System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
 
                     for (int i = 0; i < loopcount; i++)
@@ -392,9 +452,7 @@ namespace KoekoeBot
                 catch (Exception ex) { Console.Write(ex.StackTrace); }
                 finally
                 {
-                    Console.WriteLine("Finally; SendSpeakingAsync");
-                    await vnc.SendSpeakingAsync(false);
-                    vnext.GetConnection(Channel.Guild).Disconnect();
+                    Console.WriteLine("finished playing song");
                 }
 
             }
@@ -471,7 +529,7 @@ namespace KoekoeBot
             }
             File.WriteAllText(data_path, JsonConvert.SerializeObject(data));
 
-            if(!silent)
+            if (!silent)
                 System.Console.WriteLine($"Saved guild data to {data_path}");
         }
 
