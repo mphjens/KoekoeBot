@@ -34,9 +34,7 @@ namespace KoekoeBot
         public static VoiceNextExtension Voice { get; set; }
 
         //Guild id -> GuildHandler
-        static Dictionary<ulong, GuildHandler> _instances;
-
-        
+        static Dictionary<ulong, GuildHandler> _instances;     
 
         public static async Task RunBot()
         {

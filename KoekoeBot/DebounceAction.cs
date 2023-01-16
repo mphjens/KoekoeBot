@@ -27,7 +27,12 @@ public static class DebounceAction
                 var current = Interlocked.Increment(ref last);
                 Task.Delay(milliseconds, tokenSource.Token).ContinueWith(task =>
                 {
-                    if (current == last) func();
+                    if (current == last)
+                    {
+                        Console.WriteLine("Triggering function call");
+                        func();
+                    }
+                    Console.WriteLine("debounced call function call");
                     task.Dispose();
                 });
             }

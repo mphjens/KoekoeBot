@@ -62,7 +62,7 @@ namespace KoekoeBot
             {
                 await this.Leave();
             };
-            this.debouncedLeave = leaveAction.Debounce(LeaveAfterMs);
+            this.debouncedLeave = leaveAction.Debounce(GuildHandler.LeaveAfterMs);
 
             alarms = new List<AlarmData>();
         }
