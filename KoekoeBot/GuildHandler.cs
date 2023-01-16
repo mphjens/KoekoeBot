@@ -362,17 +362,19 @@ namespace KoekoeBot
             return vnc;
         }
 
-        public async Task Leave(VoiceNextConnection channelConnection = null)
+        public async Task Leave(VoiceNextConnection voiceConnection = null)
         {
-            channelConnection = channelConnection != null ? channelConnection : this.cVoiceConnection;
+            voiceConnection = voiceConnection != null ? voiceConnection : this.cVoiceConnection;
 
-            if (channelConnection != null)
+            if (voiceConnection != null)
             {
                 var vnext = Client.GetVoiceNext();
-                await channelConnection.SendSpeakingAsync(false);
-                vnext.GetConnection(channelConnection.TargetChannel.Guild).Disconnect();
+                await voiceConnection.SendSpeakingAsync(false);
+                vnext.GetConnection(voiceConnection.TargetChannel.Guild).Disconnect();
 
                 this.cVoiceConnection = null;
+            } else {
+                Console.WriteLine("Connection = null");
             }
         }
 
@@ -395,10 +397,7 @@ namespace KoekoeBot
                     System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (no users online)");
                     continue; //skip empty channels
                 }
-                
                 var vnc = await JoinWithVoice(channel);
-
-                this.debouncedLeave.cts.Cancel(); // refresh the debounced leave action so we don't leave mid sample
                 this.debouncedLeave.action();
 
                 if (vnc == null)
@@ -449,10 +448,11 @@ namespace KoekoeBot
 
                     await Task.Delay(1000);
                 }
-                catch (Exception ex) { Console.Write(ex.StackTrace); }
+                catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave() }
                 finally
                 {
                     Console.WriteLine("finished playing song");
+                    this.debouncedLeave.action();
                 }
 
             }
