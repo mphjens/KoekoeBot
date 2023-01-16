@@ -448,7 +448,7 @@ namespace KoekoeBot
 
                     await Task.Delay(1000);
                 }
-                catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave() }
+                catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
                 finally
                 {
                     Console.WriteLine("finished playing song");
