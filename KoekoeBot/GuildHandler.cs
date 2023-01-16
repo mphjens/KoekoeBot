@@ -377,10 +377,15 @@ namespace KoekoeBot
                 Console.WriteLine("Connection = null");
             }
         }
-
+        bool isPlaying = false;
         //Joins, plays audio file and leaves again. for all registered channels in this guild
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
+            if(this.isPlaying)
+                return;
+            
+            isPlaying = true;
+
             if (channels == null)
                 channels = (await GetChannels(this.ChannelIds));
 
@@ -451,8 +456,9 @@ namespace KoekoeBot
                 catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
                 finally
                 {
-                    Console.WriteLine("finished playing song");
+                    Console.WriteLine("finished playing sample");
                     this.debouncedLeave.action();
+                    isPlaying = false;
                 }
 
             }
