@@ -413,6 +413,10 @@ namespace KoekoeBot
         //Joins, plays audio file and leaves again. for all registered channels in this guild
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
+            if(this.AnnounceQueue.Count() > 5) {
+                Console.WriteLine("queue is full, ignoring AnnounceFile enqueuement..");
+            }
+
             Func<Task> nAnnounceTask = async () => {
                 if(this.isPlaying)
                 {
