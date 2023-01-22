@@ -56,7 +56,6 @@ namespace KoekoeBot
             {
                 Token = cfgjson.Token,
                 TokenType = TokenType.Bot,
-
                 AutoReconnect = true,
                 MinimumLogLevel = LogLevel.Debug,
             };
@@ -64,7 +63,8 @@ namespace KoekoeBot
             Client = new DiscordClient(cfg);
 
             Client.Ready += Client_Ready;
-            Client.GuildAvailable += Client_GuildAvailable; ;
+            Client.GuildAvailable += Client_GuildAvailable;
+            Client.GuildDeleted += Client_GuildDeleted;
             Client.ClientErrored += Client_ClientError;
 
             var ccfg = new CommandsNextConfiguration
@@ -153,7 +153,13 @@ namespace KoekoeBot
         }
         private static Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
         {
-            KoekoeController.StartupGuildHandler(sender, e).ContinueWith(async (task)=>{
+            if(KoekoeController._instances[e.Guild.Id].IsRunning) {
+                KoekoeController._instances[e.Guild.Id].Stop();
+                KoekoeController._instances.Remove(e.Guild.Id);
+            }
+                
+
+            KoekoeController.StartupGuildHandler(sender, e).ContinueWith(async (task) => {
                 // Console.WriteLine($"Guildhandler for {e.Guild.Name} stopped, trying to restart it automatically in 30 seconds.");
                 // _instances.Remove(e.Guild.Id);
 
@@ -161,6 +167,17 @@ namespace KoekoeBot
                 // Client_GuildAvailable(sender, e);
             });
 
+            return Task.CompletedTask;
+        }
+
+         private static Task Client_GuildDeleted(DiscordClient sender, GuildDeleteEventArgs e)
+        {
+            Console.WriteLine($"{e.Guild.Name} removed, stopping guildhandler");
+            if(KoekoeController._instances[e.Guild.Id].IsRunning) {
+                KoekoeController._instances[e.Guild.Id].Stop();
+                KoekoeController._instances.Remove(e.Guild.Id);
+            }
+                
             return Task.CompletedTask;
         }
 
@@ -179,7 +196,6 @@ namespace KoekoeBot
                 Console.WriteLine($"getting channels");
                 channels = await handler.GetChannels(cmd.channelIds?.ToList());
             }
-            
 
             Console.WriteLine($"executing '{cmd.type}' command from {wsEvent.clientBaseUrl}");
             switch(cmd.type)

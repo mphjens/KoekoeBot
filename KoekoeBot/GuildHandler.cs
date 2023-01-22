@@ -33,6 +33,8 @@ namespace KoekoeBot
         // The max amount of minutes to be added to minBonusInterval
         public int variableBonusInterval = 30;
 
+        private CancellationTokenSource announceTaskCS = new CancellationTokenSource();
+
         public bool IsRunning { get; private set; }
         private DiscordClient Client;
         private bool ShouldRun;
@@ -316,6 +318,7 @@ namespace KoekoeBot
             SampleData guildSample = this.getSample(sampleName);
             if (guildSample == null)
             {
+                Console.WriteLine("not playing sample; guildSample is null");
                 return;
             }
 
@@ -328,12 +331,14 @@ namespace KoekoeBot
         {
             if (cVoiceConnection != null && cVoiceConnection.TargetChannel.Id == channel.Id)
             {
+                Console.WriteLine("Reusing voice connection");
                 return this.cVoiceConnection;
             }
             else
             {
                 if (cVoiceConnection != null)
                 {
+                    Console.WriteLine("Leaving a channel");
                     await this.Leave(this.cVoiceConnection);
                 }
             }
@@ -355,6 +360,7 @@ namespace KoekoeBot
             }
 
             // connect
+            Console.WriteLine("vnext.ConnectAsync");
             vnc = await vnext.ConnectAsync(channel);
 
             this.cVoiceConnection = vnc;
@@ -373,6 +379,7 @@ namespace KoekoeBot
                 vnext.GetConnection(voiceConnection.TargetChannel.Guild).Disconnect();
 
                 this.cVoiceConnection = null;
+                this.isPlaying = false;
             } else {
                 Console.WriteLine("Connection = null");
             }
@@ -382,8 +389,10 @@ namespace KoekoeBot
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
             if(this.isPlaying)
+            {
+                Console.WriteLine("Already playing, will not announce..");
                 return;
-            
+            }
             isPlaying = true;
 
             if (channels == null)
@@ -395,6 +404,8 @@ namespace KoekoeBot
                 return;
             }
 
+            CancellationToken ct = announceTaskCS.Token;
+
             foreach (DiscordChannel channel in channels)
             {
                 if (channel.Users.Count() == 0)
@@ -403,19 +414,27 @@ namespace KoekoeBot
                     continue; //skip empty channels
                 }
                 var vnc = await JoinWithVoice(channel);
-                this.debouncedLeave.action();
+                
 
                 if (vnc == null)
                 {
                     System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (problem joining the channel)");
                     continue;
                 }
+                
+                this.debouncedLeave.action();
 
                 try
                 {
                     // wait for current playback to finish
                     while (vnc.IsPlaying)
                     {
+                        if(ct.IsCancellationRequested)
+                        {
+                            await this.Leave();
+                            return;
+                        }
+                        Console.WriteLine("WaitForPlaybackFinishAsync..");
                         await vnc.WaitForPlaybackFinishAsync();
                     }
 
@@ -431,7 +450,6 @@ namespace KoekoeBot
                         RedirectStandardError = true,
                         UseShellExecute = false,
                         CreateNoWindow = true
-
                     };
 
                     System.Console.WriteLine($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
@@ -451,7 +469,7 @@ namespace KoekoeBot
                         await vnc.WaitForPlaybackFinishAsync();
                     }
 
-                    await Task.Delay(1000);
+                    await Task.Delay(100);
                 }
                 catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
                 finally
