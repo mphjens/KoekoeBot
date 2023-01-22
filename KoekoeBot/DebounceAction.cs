@@ -29,10 +29,9 @@ public static class DebounceAction
                 {
                     if (current == last)
                     {
-                        Console.WriteLine("Triggering function call");
+                        Console.WriteLine("Triggering debounced function call");
                         func();
                     }
-                    Console.WriteLine("debounced call function call");
                     task.Dispose();
                 });
             }

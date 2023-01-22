@@ -41,6 +41,8 @@ namespace KoekoeBot
 
         private Dictionary<ulong, DiscordChannel> cachedChannels;
 
+        private Queue<Func<Task>> AnnounceQueue = new Queue<Func<Task>>();
+
         private VoiceNextConnection cVoiceConnection = null;
         private DebouncedAction debouncedLeave;
         private static int LeaveAfterMs = 20000; //leave after 20seconds of inactivity
@@ -236,11 +238,34 @@ namespace KoekoeBot
             return $"{string.Join("-", $"extra_{samplename.Replace(' ', '_')}".Split(Path.GetInvalidFileNameChars()))}.mp3";
         }
 
+        //When indefinite is true it keeps running until this.ShouldRun is false (aka the guildhandler is stopped)
+        public async Task ProcessAnnouncementQueue(Queue<Func<Task>> queue, bool indefinite=true) {
+            while(this.ShouldRun) {
+                if(queue.Any()){
+                    var cTask = queue.Dequeue();
+                    if(cTask != null){
+                        await cTask();
+                    }
+                        
+                }
+
+                if(!indefinite) {
+                    return;
+                } else {
+                    await Task.Delay(250);
+                }
+            }
+        }
+
         public async Task Execute()
         {
+            
             Console.WriteLine($"Executing timekeeper loop for {this.guildData.guildName}");
             IsRunning = true;
             ShouldRun = true;
+
+            // Will run a background task working on the announcement queue tasks
+            var _ = ProcessAnnouncementQueue(this.AnnounceQueue);
 
             //This loop ticks every new minute on the systemclock
             while (ShouldRun)
@@ -388,98 +413,103 @@ namespace KoekoeBot
         //Joins, plays audio file and leaves again. for all registered channels in this guild
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
-            if(this.isPlaying)
-            {
-                Console.WriteLine("Already playing, will not announce..");
-                return;
-            }
-            isPlaying = true;
-
-            if (channels == null)
-                channels = (await GetChannels(this.ChannelIds));
-
-            if (!File.Exists(audio_path))
-            {
-                System.Console.WriteLine($"Will not be playing {audio_path} (file not found)");
-                return;
-            }
-
-            CancellationToken ct = announceTaskCS.Token;
-
-            foreach (DiscordChannel channel in channels)
-            {
-                if (channel.Users.Count() == 0)
+            Func<Task> nAnnounceTask = async () => {
+                if(this.isPlaying)
                 {
-                    System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (no users online)");
-                    continue; //skip empty channels
-                }
-                var vnc = await JoinWithVoice(channel);
-                
-
-                if (vnc == null)
-                {
-                    System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (problem joining the channel)");
-                    continue;
+                    Console.WriteLine("Already playing, will not announce..");
+                    return;
                 }
                 
-                this.debouncedLeave.action();
 
-                try
+                if (channels == null)
+                    channels = (await GetChannels(this.ChannelIds));
+
+                if (!File.Exists(audio_path))
                 {
-                    // wait for current playback to finish
-                    while (vnc.IsPlaying)
-                    {
-                        if(ct.IsCancellationRequested)
-                        {
-                            await this.Leave();
-                            return;
-                        }
-                        Console.WriteLine("WaitForPlaybackFinishAsync..");
-                        await vnc.WaitForPlaybackFinishAsync();
-                    }
-
-                    await vnc.SendSpeakingAsync(true);
-
-                    await Task.Delay(500);
-
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "ffmpeg" : "ffmpeg.exe",
-                        Arguments = $@"-i ""{audio_path}"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-
-                    System.Console.WriteLine($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
-                    //System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
-
-                    for (int i = 0; i < loopcount; i++)
-                    {
-                        var ffmpeg = Process.Start(psi);
-                        var ffout = ffmpeg.StandardOutput.BaseStream;
-
-                        var txStream = vnc.GetTransmitSink();
-                        Console.WriteLine("CopyToAsync");
-                        await ffout.CopyToAsync(txStream);
-                        Console.WriteLine("FlushAsync");
-                        await txStream.FlushAsync();
-                        Console.WriteLine("WaitForPlaybackFinishAsync");
-                        await vnc.WaitForPlaybackFinishAsync();
-                    }
-
-                    await Task.Delay(100);
+                    System.Console.WriteLine($"Will not be playing {audio_path} (file not found)");
+                    return;
                 }
-                catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
-                finally
+
+                CancellationToken ct = announceTaskCS.Token;
+
+                foreach (DiscordChannel channel in channels)
                 {
-                    Console.WriteLine("finished playing sample");
+                    if (channel.Users.Count() == 0)
+                    {
+                        System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (no users online)");
+                        continue; //skip empty channels
+                    }
+                    var vnc = await JoinWithVoice(channel);
+                    
+
+                    if (vnc == null)
+                    {
+                        System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (problem joining the channel)");
+                        continue;
+                    }
+                    
                     this.debouncedLeave.action();
-                    isPlaying = false;
-                }
+                    isPlaying = true;
 
-            }
+                    try
+                    {
+                        // wait for current playback to finish
+                        while (vnc.IsPlaying)
+                        {
+                            if(ct.IsCancellationRequested)
+                            {
+                                await this.Leave();
+                                return;
+                            }
+                            Console.WriteLine("WaitForPlaybackFinishAsync..");
+                            await vnc.WaitForPlaybackFinishAsync();
+                        }
+
+                        await vnc.SendSpeakingAsync(true);
+
+                        await Task.Delay(500);
+
+                        var psi = new ProcessStartInfo
+                        {
+                            FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "ffmpeg" : "ffmpeg.exe",
+                            Arguments = $@"-i ""{audio_path}"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+
+                        System.Console.WriteLine($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
+                        //System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
+
+                        for (int i = 0; i < loopcount; i++)
+                        {
+                            var ffmpeg = Process.Start(psi);
+                            var ffout = ffmpeg.StandardOutput.BaseStream;
+
+                            var txStream = vnc.GetTransmitSink();
+                            Console.WriteLine("CopyToAsync");
+                            await ffout.CopyToAsync(txStream);
+                            Console.WriteLine("FlushAsync");
+                            await txStream.FlushAsync();
+                            Console.WriteLine("WaitForPlaybackFinishAsync");
+                            await vnc.WaitForPlaybackFinishAsync();
+                        }
+
+                        await Task.Delay(100);
+                    }
+                    catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
+                    finally
+                    {
+                        Console.WriteLine("finished playing sample");
+                        this.debouncedLeave.action();
+                        isPlaying = false;
+                    }
+
+                }
+            };
+        
+            this.AnnounceQueue.Enqueue(nAnnounceTask); // In Execute a background task was kicked off to work off this queue..
         }
 
         public void AddChannel(DiscordChannel channel, bool autosave = true)
