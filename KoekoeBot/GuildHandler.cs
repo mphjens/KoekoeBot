@@ -416,8 +416,7 @@ namespace KoekoeBot
             Func<Task> nAnnounceTask = async () => {
                 if(this.isPlaying)
                 {
-                    Console.WriteLine("Already playing, will not announce..");
-                    return;
+                    Console.WriteLine("WARNING: Already playing, ya done goofed..");
                 }
                 
 
