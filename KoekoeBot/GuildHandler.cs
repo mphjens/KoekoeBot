@@ -390,6 +390,8 @@ namespace KoekoeBot
 
             this.cVoiceConnection = vnc;
 
+            await Task.Delay(500);
+
             return vnc;
         }
 
@@ -469,8 +471,6 @@ namespace KoekoeBot
                         }
 
                         await vnc.SendSpeakingAsync(true);
-
-                        await Task.Delay(500);
 
                         var psi = new ProcessStartInfo
                         {
