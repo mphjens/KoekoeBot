@@ -153,7 +153,7 @@ namespace KoekoeBot
         }
         private static Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
         {
-            if(KoekoeController._instances[e.Guild.Id].IsRunning) {
+            if(KoekoeController._instances.ContainsKey(e.Guild.Id) && KoekoeController._instances[e.Guild.Id].IsRunning) {
                 KoekoeController._instances[e.Guild.Id].Stop();
                 KoekoeController._instances.Remove(e.Guild.Id);
             }
