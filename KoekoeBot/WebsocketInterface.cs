@@ -82,7 +82,6 @@ namespace KoekoeBot
             {
                 string received = Encoding.UTF8.GetString(args.data);
                 // websocketServer.SendTextMessage("Client: " + args.clientId + " on url: " + args.clientBaseUrl + ", says: " + received);
-                Console.WriteLine("Got ws message: " + received);
                 try
                 {
                     var cmd = JsonConvert.DeserializeObject<KoekoeWebsocketCommand>(received);

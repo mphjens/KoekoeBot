@@ -57,7 +57,7 @@ namespace KoekoeBot
                 Token = cfgjson.Token,
                 TokenType = TokenType.Bot,
                 AutoReconnect = true,
-                MinimumLogLevel = LogLevel.Debug,
+                MinimumLogLevel = LogLevel.Information//LogLevel.Debug,
             };
 
             Client = new DiscordClient(cfg);
@@ -160,7 +160,7 @@ namespace KoekoeBot
                 
 
             KoekoeController.StartupGuildHandler(sender, e).ContinueWith(async (task) => {
-                // Console.WriteLine($"Guildhandler for {e.Guild.Name} stopped, trying to restart it automatically in 30 seconds.");
+                // ctx.Client.Logger.LogWarning($"Guildhandler for {e.Guild.Name} stopped, trying to restart it automatically in 30 seconds.");
                 // _instances.Remove(e.Guild.Id);
 
                 // await Task.Delay(30 * 1000);
@@ -172,7 +172,7 @@ namespace KoekoeBot
 
          private static Task Client_GuildDeleted(DiscordClient sender, GuildDeleteEventArgs e)
         {
-            Console.WriteLine($"{e.Guild.Name} removed, stopping guildhandler");
+            Client.Logger.LogInformation($"{e.Guild.Name} removed, stopping guildhandler");
             if(KoekoeController._instances.ContainsKey(e.Guild.Id) && KoekoeController._instances[e.Guild.Id].IsRunning) {
                 KoekoeController._instances[e.Guild.Id].Stop();
                 KoekoeController._instances.Remove(e.Guild.Id);
@@ -185,19 +185,17 @@ namespace KoekoeBot
         {
             GuildHandler handler = null;
             List<DiscordChannel> channels = null;
-            Console.WriteLine($"guilds: '{String.Join(',',_instances.Keys)}'");
             if (cmd.type != KoekoeWebsocketCommand.WebsocketCommandType.GetGuilds && !_instances.TryGetValue(cmd.GuildId, out handler))
             {
-                Console.WriteLine($"got '{cmd.type}' command for unknown guildid {cmd.GuildId}");
+                Client.Logger.LogWarning($"got '{cmd.type}' command for unknown guildid {cmd.GuildId}");
                 return false;
             }
 
             if(cmd.channelIds != null) {
-                Console.WriteLine($"getting channels");
                 channels = await handler.GetChannels(cmd.channelIds?.ToList());
             }
 
-            Console.WriteLine($"executing '{cmd.type}' command from {wsEvent.clientBaseUrl}");
+            Client.Logger.LogInformation($"executing '{cmd.type}' command from {wsEvent.clientBaseUrl}");
             switch(cmd.type)
             {
                 case KoekoeWebsocketCommand.WebsocketCommandType.PlayFile:
@@ -212,7 +210,6 @@ namespace KoekoeBot
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetGuilds:
                     string payload = JsonConvert.SerializeObject(getGuilds());
                     wsServer.SendTextMessage(payload, wsEvent.clientId);
-                    Console.WriteLine($"sent {payload} over websocket");
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.GetChannels:
                     wsServer.SendTextMessage(JsonConvert.SerializeObject(await getChannels(cmd.GuildId)), wsEvent.clientId);
@@ -263,7 +260,7 @@ namespace KoekoeBot
             // sent to our client
             //sender.Logger.LogInformation(Program.BotEventId, $"Guild available: {e.Guild.Name}");
 
-            Console.WriteLine($"Starting guild handler for {e.Guild.Name}");
+            Client.Logger.LogInformation($"Starting guild handler for {e.Guild.Name}");
 
 
             //Create or get the handler for this guild

@@ -16,6 +16,7 @@ namespace KoekoeBot
     using DSharpPlus.VoiceNext;
     using System.Net;
     using System.Text;
+    using Microsoft.Extensions.Logging;
 
     class KoekoeCommands : BaseCommandModule
     {
@@ -403,7 +404,7 @@ namespace KoekoeBot
             if (!File.Exists(filename))
             {
                 await ctx.RespondAsync($"Will not be playing {filename} (file not found)");
-                System.Console.WriteLine($"Will not be playing {filename} (file not found)");
+                ctx.Client.Logger.LogWarning($"Will not be playing {filename} (file not found)");
             }
 
             DiscordChannel Channel = vstat.Channel;
@@ -412,7 +413,7 @@ namespace KoekoeBot
             var vnext = ctx.Client.GetVoiceNext();
             if (vnext == null)
             {
-                System.Console.WriteLine("VoiceNext not configured");
+                ctx.Client.Logger.LogWarning("VoiceNext not configured");
                 return;
             }
 
@@ -420,7 +421,7 @@ namespace KoekoeBot
             var vnc = vnext.GetConnection(Channel.Guild);
             if (vnc != null)
             {
-                System.Console.WriteLine("Already connected in this guild.");
+                ctx.Client.Logger.LogWarning("Already connected in this guild.");
                 return;
             }
 
@@ -450,7 +451,7 @@ namespace KoekoeBot
 
                 };
 
-                System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
+                ctx.Client.Logger.LogInformation($"Will run {psi.FileName} as {psi.Arguments}");
 
                 var ffmpeg = Process.Start(psi);
                 var ffout = ffmpeg.StandardOutput.BaseStream;

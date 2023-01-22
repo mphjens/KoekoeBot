@@ -10,6 +10,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace KoekoeBot
 {
@@ -76,6 +77,18 @@ namespace KoekoeBot
             ShouldRun = false;
         }
 
+        private void logDebug(string message) {
+            ((ILogger<BaseDiscordClient>) this.Client.Logger).LogDebug(message);
+        }
+
+        private void logInformation(string message) {
+            ((ILogger<BaseDiscordClient>) this.Client.Logger).LogInformation(message);
+        }
+
+        private void logWarning(string message) {
+            ((ILogger<BaseDiscordClient>) this.Client.Logger).LogWarning(message);
+        }
+
         public void SetGuildData(SavedGuildData data)
         {
             this.guildData = data;
@@ -90,7 +103,7 @@ namespace KoekoeBot
             {
                 if (!File.Exists(Path.Combine(getSampleBasePath(), sample.Filename)))
                 {
-                    Console.WriteLine($"disabling {sample.Name} because {sample.Filename} does not exist");
+                    this.logWarning($"disabling {sample.Name} because {sample.Filename} does not exist");
                     sample.exists = false;
                 }
                 else
@@ -128,7 +141,7 @@ namespace KoekoeBot
             SampleData existing = this.getSample(name);
             if (existing != null)
             {
-                Console.WriteLine($"WARN: {name} already exists in {this.guildData.guildName}");
+                this.logWarning($"WARN: {name} already exists in {this.guildData.guildName}");
                 return null;
             }
 
@@ -260,7 +273,7 @@ namespace KoekoeBot
         public async Task Execute()
         {
             
-            Console.WriteLine($"Executing timekeeper loop for {this.guildData.guildName}");
+            this.logInformation($"Executing timekeeper loop for {this.guildData.guildName}");
             IsRunning = true;
             ShouldRun = true;
 
@@ -282,7 +295,7 @@ namespace KoekoeBot
                         continue;
                     if (alarm.AlarmDate.Hour == now.Hour && alarm.AlarmDate.Minute == now.Minute)
                     {
-                        System.Console.WriteLine($"Triggering alarm {alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
+                        this.logInformation($"Triggering alarm {alarm.AlarmName} - {alarm.AlarmDate.ToShortTimeString()}");
                         //Announce in the channel where the user that set this alarm currently is
                         List<DiscordChannel> channels = (await GetChannels(this.ChannelIds)).Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList();
                         string sample = alarm.sampleid != null ? this.getSample(alarm.sampleid.ToString()).Filename : "CHIME1.wav";
@@ -305,7 +318,7 @@ namespace KoekoeBot
 
                 if (now.Minute == 0) //If we entered a new hour
                 {
-                    System.Console.WriteLine($"Guildhandler for {this.guildData.guildName} entered new hour: {now.Hour}");
+                    this.logInformation($"Guildhandler for {this.guildData.guildName} entered new hour: {now.Hour}");
                     this.SaveGuildData();
                     await AnnounceFile(getFileNameForHour(now.Hour));
                 }
@@ -323,17 +336,16 @@ namespace KoekoeBot
                     //Determine when we next will play a bonusclip (from minBonusInterval up to minBonusInterval + variableBonusInterval minutes)
 
                     nextBonusClip = now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
-                    System.Console.WriteLine($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name} which will be played at {nextBonusClip.ToShortTimeString()}");
+                    this.logInformation($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name} which will be played at {nextBonusClip.ToShortTimeString()}");
                 }
 
-                //System.Console.WriteLine($"Guildhandler has ticked {Guild.Name}");
                 //Calculate the number of miliseconds until a new minute on the system clock (fix? add one second to account for task.delay() inaccuracy)
                 double millisToNextMinute = (double)((60 * 1000) - now.TimeOfDay.TotalMilliseconds % (60 * 1000));
 
                 await Task.Delay((int)millisToNextMinute + 1000);
             }
 
-            System.Console.WriteLine($"Guildhandler stopped {Guild.Name}");
+            this.logInformation($"Guildhandler stopped {Guild.Name}");
 
             IsRunning = false;
         }
@@ -343,7 +355,7 @@ namespace KoekoeBot
             SampleData guildSample = this.getSample(sampleName);
             if (guildSample == null)
             {
-                Console.WriteLine("not playing sample; guildSample is null");
+                this.logWarning("not playing sample; guildSample is null");
                 return;
             }
 
@@ -356,14 +368,14 @@ namespace KoekoeBot
         {
             if (cVoiceConnection != null && cVoiceConnection.TargetChannel.Id == channel.Id)
             {
-                Console.WriteLine("Reusing voice connection");
+                this.logDebug("Reusing voice connection");
                 return this.cVoiceConnection;
             }
             else
             {
                 if (cVoiceConnection != null)
                 {
-                    Console.WriteLine("Leaving a channel");
+                    this.logDebug($"Leaving a channel before joining {channel.Name}");
                     await this.Leave(this.cVoiceConnection);
                 }
             }
@@ -372,7 +384,7 @@ namespace KoekoeBot
             var vnext = Client.GetVoiceNext();
             if (vnext == null)
             {
-                System.Console.WriteLine("VoiceNext not configured");
+                this.logWarning("VoiceNext not configured");
                 return null;
             }
 
@@ -380,12 +392,12 @@ namespace KoekoeBot
             var vnc = vnext.GetConnection(channel.Guild);
             if (vnc != null)
             {
-                System.Console.WriteLine("Already connected in this guild.");
+                this.logWarning("Already connected in this guild.");
                 return null;
             }
 
             // connect
-            Console.WriteLine("vnext.ConnectAsync");
+            this.logDebug("vnext.ConnectAsync");
             vnc = await vnext.ConnectAsync(channel);
 
             this.cVoiceConnection = vnc;
@@ -408,7 +420,7 @@ namespace KoekoeBot
                 this.cVoiceConnection = null;
                 this.isPlaying = false;
             } else {
-                Console.WriteLine("Connection = null");
+                this.logWarning("Connection = null while trying to leaving channel");
             }
         }
         bool isPlaying = false;
@@ -416,13 +428,13 @@ namespace KoekoeBot
         public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
         {
             if(this.AnnounceQueue.Count() > 5) {
-                Console.WriteLine("queue is full, ignoring AnnounceFile enqueuement..");
+                this.logInformation("queue is full, ignoring AnnounceFile enqueuement..");
             }
 
             Func<Task> nAnnounceTask = async () => {
                 if(this.isPlaying)
                 {
-                    Console.WriteLine("WARNING: Already playing, ya done goofed..");
+                    this.logWarning("WARNING: Already playing, ya done goofed..");
                 }
                 
 
@@ -431,7 +443,7 @@ namespace KoekoeBot
 
                 if (!File.Exists(audio_path))
                 {
-                    System.Console.WriteLine($"Will not be playing {audio_path} (file not found)");
+                    this.logWarning($"Will not be playing {audio_path} (file not found)");
                     return;
                 }
 
@@ -441,7 +453,7 @@ namespace KoekoeBot
                 {
                     if (channel.Users.Count() == 0)
                     {
-                        System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (no users online)");
+                        this.logWarning($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (no users online)");
                         continue; //skip empty channels
                     }
                     var vnc = await JoinWithVoice(channel);
@@ -449,7 +461,7 @@ namespace KoekoeBot
 
                     if (vnc == null)
                     {
-                        System.Console.WriteLine($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (problem joining the channel)");
+                        this.logWarning($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (problem joining the channel)");
                         continue;
                     }
                     
@@ -466,7 +478,7 @@ namespace KoekoeBot
                                 await this.Leave();
                                 return;
                             }
-                            Console.WriteLine("WaitForPlaybackFinishAsync..");
+                            this.logDebug("WaitForPlaybackFinishAsync..");
                             await vnc.WaitForPlaybackFinishAsync();
                         }
 
@@ -482,8 +494,7 @@ namespace KoekoeBot
                             CreateNoWindow = true
                         };
 
-                        System.Console.WriteLine($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
-                        //System.Console.WriteLine($"Will run {psi.FileName} as {psi.Arguments}");
+                        this.logInformation($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
 
                         for (int i = 0; i < loopcount; i++)
                         {
@@ -491,11 +502,8 @@ namespace KoekoeBot
                             var ffout = ffmpeg.StandardOutput.BaseStream;
 
                             var txStream = vnc.GetTransmitSink();
-                            Console.WriteLine("CopyToAsync");
                             await ffout.CopyToAsync(txStream);
-                            Console.WriteLine("FlushAsync");
                             await txStream.FlushAsync();
-                            Console.WriteLine("WaitForPlaybackFinishAsync");
                             await vnc.WaitForPlaybackFinishAsync();
                         }
 
@@ -504,7 +512,7 @@ namespace KoekoeBot
                     catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
                     finally
                     {
-                        Console.WriteLine("finished playing sample");
+                        this.logInformation("finished playing sample");
                         this.debouncedLeave.action();
                         isPlaying = false;
                     }
@@ -576,7 +584,6 @@ namespace KoekoeBot
             SavedGuildData data = this.guildData != null ? this.guildData : new SavedGuildData();
             data.alarms = this.alarms.ToArray();
             data.channelIds = this.GetRegisteredChannelIds();
-            System.Console.WriteLine($"Saving guild data {Guild.Name}");
 
             //Update saved data
             string data_path = Path.Combine(Environment.CurrentDirectory, "volume", "data", $"guilddata_{this.Guild.Id}.json");
@@ -587,7 +594,7 @@ namespace KoekoeBot
             File.WriteAllText(data_path, JsonConvert.SerializeObject(data));
 
             if (!silent)
-                System.Console.WriteLine($"Saved guild data to {data_path}");
+                this.logInformation($"Saved guild data to {data_path}");
         }
 
         public void ClearGuildData()
