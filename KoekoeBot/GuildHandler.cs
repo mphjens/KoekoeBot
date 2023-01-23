@@ -299,7 +299,7 @@ namespace KoekoeBot
                         //Announce in the channel where the user that set this alarm currently is
                         List<DiscordChannel> channels = (await GetChannels(this.ChannelIds)).Where(x => x.Users.Where(x => x.Id == alarm.userId).Count() > 0).ToList();
                         string sample = alarm.sampleid != null ? this.getSample(alarm.sampleid.ToString()).Filename : "CHIME1.wav";
-                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), sample), 2, channels);
+                        await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), sample), 2, channels, true);
                         alarms.RemoveAt(i); //Todo: implement recurring alarms
                         i--;
                     }
@@ -313,14 +313,14 @@ namespace KoekoeBot
                 //Special case for 420 (blaze it)
                 if (now.Minute == 20 && (now.Hour % 12) == 4)
                 {
-                    await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), "420.mp3"));
+                    await AnnounceFile(Path.Combine(Environment.CurrentDirectory, this.getSampleBasePath(), "420.mp3"), 1, null, true);
                 }
 
                 if (now.Minute == 0) //If we entered a new hour
                 {
                     this.logInformation($"Guildhandler for {this.guildData.guildName} entered new hour: {now.Hour}");
                     this.SaveGuildData();
-                    await AnnounceFile(getFileNameForHour(now.Hour));
+                    await AnnounceFile(getFileNameForHour(now.Hour), 1, null, true);
                 }
 
                 //check for bonus clip
@@ -331,7 +331,7 @@ namespace KoekoeBot
                     int clipIndex = rnd.Next(extraClipFiles.Length);
 
                     if (nextBonusClip != DateTime.UnixEpoch)//Ignore the first time as this runs when the handler is started
-                        await AnnounceFile(extraClipFiles[clipIndex]);
+                        await AnnounceFile(extraClipFiles[clipIndex], 1, null, true);
 
                     //Determine when we next will play a bonusclip (from minBonusInterval up to minBonusInterval + variableBonusInterval minutes)
 
@@ -424,10 +424,13 @@ namespace KoekoeBot
             }
         }
         bool isPlaying = false;
-        //Joins, plays audio file and leaves again. for all registered channels in this guild
-        public async Task AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null)
+
+
+        // Queues a job that joins channel(s), plays an audio file and leaves again.
+        // when forceQueue is true it ignores the limit on the queue length (so we can queue hour announcements etc.)
+        public void AnnounceFile(string audio_path, int loopcount = 1, List<DiscordChannel> channels = null, bool forceQueue = false)
         {
-            if(this.AnnounceQueue.Count() > 5) {
+            if(!forceQueue && this.AnnounceQueue.Count() > 5) {
                 this.logInformation("queue is full, ignoring AnnounceFile enqueuement..");
             }
 
