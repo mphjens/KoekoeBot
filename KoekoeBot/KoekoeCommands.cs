@@ -37,10 +37,6 @@ namespace KoekoeBot
             if (handler != null)
                 handler.AddChannel(vstat.Channel); //Could throw access violation because we run the handlers async, this needs fixing
 
-            if (!handler.IsRunning)
-                handler.Execute(); //Will run async
-
-
             await ctx.RespondAsync($"Registered to `{vstat.Channel.Name}`");
         }
 
@@ -166,9 +162,6 @@ namespace KoekoeBot
 
 
                         handler.AddAlarm(dt, alarmname, hasSample ? (int?)sampleId : null, ctx.User.Id);
-
-                        if (!handler.IsRunning) //If the handler isn't running for some reason start it TODO: remove these, or implement handler sleep 
-                            handler.Execute(); //Will run async
                     }
                 }
 
