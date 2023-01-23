@@ -298,7 +298,11 @@ namespace KoekoeBot
             handler.UpdateSamplelist();
 
             if (!handler.IsRunning) //Run the handler loop if it's not already started
-                return handler.Execute();
+            {
+                // Will run a background task for each guild
+                var _ = Task.Factory.StartNew(async ()=> { await handler.Execute(); }, TaskCreationOptions.LongRunning);
+            }
+                
             
             return Task.CompletedTask;
 

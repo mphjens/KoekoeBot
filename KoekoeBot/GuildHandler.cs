@@ -278,8 +278,8 @@ namespace KoekoeBot
             ShouldRun = true;
 
             // Will run a background task working on the announcement queue tasks
-            var _ = ProcessAnnouncementQueue(this.AnnounceQueue);
-
+            var _ = Task.Factory.StartNew(async ()=> { await ProcessAnnouncementQueue(this.AnnounceQueue); }, TaskCreationOptions.LongRunning);
+            
             //This loop ticks every new minute on the systemclock
             while (ShouldRun)
             {
