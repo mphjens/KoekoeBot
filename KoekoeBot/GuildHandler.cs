@@ -432,6 +432,7 @@ namespace KoekoeBot
         {
             if(!forceQueue && this.AnnounceQueue.Count() > 5) {
                 this.logInformation("queue is full, ignoring AnnounceFile enqueuement..");
+                return; 
             }
 
             Func<Task> nAnnounceTask = async () => {
