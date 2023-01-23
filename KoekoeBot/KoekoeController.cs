@@ -199,10 +199,10 @@ namespace KoekoeBot
             switch(cmd.type)
             {
                 case KoekoeWebsocketCommand.WebsocketCommandType.PlayFile:
-                    await handler.AnnounceFile(cmd.args[0], 1, channels);
+                    handler.AnnounceFile(cmd.args[0], 1, channels);
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.PlaySample:
-                    await handler.AnnounceSample(cmd.args[0], 1, channels);
+                    handler.AnnounceSample(cmd.args[0], 1, channels);
                     break;
                 case KoekoeWebsocketCommand.WebsocketCommandType.Debug:
 

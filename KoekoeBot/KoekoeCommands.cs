@@ -223,7 +223,7 @@ namespace KoekoeBot
             if (handler != null)
             {
                 await ctx.RespondAsync($"Will announce `{filename}`");
-                await handler.AnnounceFile(filename);
+                handler.AnnounceFile(filename);
                 await ctx.RespondAsync($"Done announcing `{filename}`");
             }
 
@@ -381,7 +381,7 @@ namespace KoekoeBot
             if(sample != null && sample.enabled){
                 List<DiscordChannel> channels = new List<DiscordChannel>();
                 channels.Add(vstat.Channel);
-                await handler.AnnounceSample(sampleNameOrAlias, 1, channels); //each sample has it's sample number as an alias
+                handler.AnnounceSample(sampleNameOrAlias, 1, channels); //each sample has it's sample number as an alias
             } else {
                 await ctx.RespondAsync($"{sampleNameOrAlias} {(sample == null ? "does not exist" : "is disabled")} :(");
             }
