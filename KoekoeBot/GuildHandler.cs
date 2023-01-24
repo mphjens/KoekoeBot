@@ -483,7 +483,7 @@ namespace KoekoeBot
                                 return;
                             }
                             this.logDebug("WaitForPlaybackFinishAsync..");
-                            await vnc.WaitForPlaybackFinishAsync();
+                            //await vnc.WaitForPlaybackFinishAsync();
                         }
 
                         await vnc.SendSpeakingAsync(true);
@@ -508,7 +508,7 @@ namespace KoekoeBot
                             var txStream = vnc.GetTransmitSink();
                             await ffout.CopyToAsync(txStream);
                             await txStream.FlushAsync();
-                            await vnc.WaitForPlaybackFinishAsync();
+                            //await vnc.WaitForPlaybackFinishAsync();
                         }
 
                         await Task.Delay(100);
