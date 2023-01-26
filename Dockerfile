@@ -15,7 +15,7 @@ RUN apt-get install -yq tzdata && \
     dpkg-reconfigure -f noninteractive tzdata
 
 # we need ffmpeg to play the audio samples, libopus and libsodium for discord voice
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg libopus-dev libsodium-dev 
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libopus-dev libsodium-dev 
 
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 

@@ -488,34 +488,15 @@ namespace KoekoeBot
                         }
 
                         await vnc.SendSpeakingAsync(true);
-
-                        // var psi = new ProcessStartInfo
-                        // {
-                        //     FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "ffmpeg" : "ffmpeg.exe",
-                        //     Arguments = $@"-i ""{audio_path}"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
-                        //     RedirectStandardOutput = true,
-                        //     RedirectStandardError = true,
-                        //     UseShellExecute = false,
-                        //     CreateNoWindow = true
-                        // };
-
                         this.logInformation($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
 
                         for (int i = 0; i < loopcount; i++)
                         {
-                            // var ffmpeg = Process.Start(psi);
-                            // var ffout = ffmpeg.StandardOutput.BaseStream;
-
-                            // var txStream = vnc.GetTransmitSink();
-                            // await ffout.CopyToAsync(txStream);
-                            // await txStream.FlushAsync();
-                            // //await vnc.WaitForPlaybackFinishAsync();
-                            // open the mp3 file.
                             
                             MP3Stream stream = new MP3Stream(audio_path);
 
                             var txStream = vnc.GetTransmitSink();
-                            await stream.CopyToAsync(txStream);
+                            await stream.CopyToAsync(txStream, 4096);
                             await txStream.FlushAsync();
 
                             // close the stream after we're done with it.
