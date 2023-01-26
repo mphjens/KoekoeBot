@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using MP3Sharp;
 
 namespace KoekoeBot
 {
@@ -482,33 +483,43 @@ namespace KoekoeBot
                                 await this.Leave();
                                 return;
                             }
-                            this.logDebug("WaitForPlaybackFinishAsync..");
+                            //this.logDebug("WaitForPlaybackFinishAsync..");
                             //await vnc.WaitForPlaybackFinishAsync();
                         }
 
                         await vnc.SendSpeakingAsync(true);
 
-                        var psi = new ProcessStartInfo
-                        {
-                            FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "ffmpeg" : "ffmpeg.exe",
-                            Arguments = $@"-i ""{audio_path}"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
+                        // var psi = new ProcessStartInfo
+                        // {
+                        //     FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "ffmpeg" : "ffmpeg.exe",
+                        //     Arguments = $@"-i ""{audio_path}"" -ac 2 -f s16le -ar 48000 pipe:1 -loglevel quiet",
+                        //     RedirectStandardOutput = true,
+                        //     RedirectStandardError = true,
+                        //     UseShellExecute = false,
+                        //     CreateNoWindow = true
+                        // };
 
                         this.logInformation($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
 
                         for (int i = 0; i < loopcount; i++)
                         {
-                            var ffmpeg = Process.Start(psi);
-                            var ffout = ffmpeg.StandardOutput.BaseStream;
+                            // var ffmpeg = Process.Start(psi);
+                            // var ffout = ffmpeg.StandardOutput.BaseStream;
+
+                            // var txStream = vnc.GetTransmitSink();
+                            // await ffout.CopyToAsync(txStream);
+                            // await txStream.FlushAsync();
+                            // //await vnc.WaitForPlaybackFinishAsync();
+                            // open the mp3 file.
+                            
+                            MP3Stream stream = new MP3Stream(audio_path);
 
                             var txStream = vnc.GetTransmitSink();
-                            await ffout.CopyToAsync(txStream);
+                            await stream.CopyToAsync(txStream);
                             await txStream.FlushAsync();
-                            //await vnc.WaitForPlaybackFinishAsync();
+
+                            // close the stream after we're done with it.
+                            stream.Close();
                         }
 
                         await Task.Delay(100);
