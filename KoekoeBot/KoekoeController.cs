@@ -40,6 +40,8 @@ namespace KoekoeBot
         {
             _instances = new Dictionary<ulong, GuildHandler>();
 
+            
+
             string data_path = Path.Combine(Environment.CurrentDirectory, "volume", "data");
             if (!Directory.Exists(data_path))
             {
@@ -57,7 +59,8 @@ namespace KoekoeBot
                 Token = cfgjson.Token,
                 TokenType = TokenType.Bot,
                 AutoReconnect = true,
-                MinimumLogLevel = LogLevel.Information//LogLevel.Debug,
+                MinimumLogLevel = LogLevel.Debug,
+                Intents = DiscordIntents.MessageContents | DiscordIntents.GuildMessages | DiscordIntents.GuildVoiceStates | DiscordIntents.DirectMessages | DiscordIntents.Guilds,
             };
 
             Client = new DiscordClient(cfg);
