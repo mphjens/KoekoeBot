@@ -34,6 +34,8 @@ namespace KoekoeBot
         // The max amount of minutes to be added to minBonusInterval
         public int variableBonusInterval = 30;
 
+        public static int PlayTimeoutSeconds = 30;
+
         private CancellationTokenSource announceTaskCS = new CancellationTokenSource();
 
         public bool IsRunning { get; private set; }
@@ -252,22 +254,27 @@ namespace KoekoeBot
         }
 
         //When indefinite is true it keeps running until this.ShouldRun is false (aka the guildhandler is stopped)
-        public async Task ProcessAnnouncementQueue(Queue<Func<Task>> queue, bool indefinite=true) {
-            while(this.ShouldRun) {
-                if(queue.Any()){
-                    var cTask = queue.Dequeue();
+        public async Task ProcessAnnouncementQueue(bool indefinite=true) {
+            //while(this.ShouldRun) {
+                if(AnnounceQueue.Any()){
+                    var cTask = AnnounceQueue.Dequeue();
                     if(cTask != null){
-                        await cTask();
+                        Task task = cTask();
+                        if (await Task.WhenAny(task, Task.Delay(PlayTimeoutSeconds * 1000)) != task) {
+                            // we timed out
+                            this.Leave();
+                            ProcessAnnouncementQueue(indefinite);
+                        }
                     }
-                        
                 }
 
                 if(!indefinite) {
                     return;
                 } else {
                     await Task.Delay(250);
+                    ProcessAnnouncementQueue(indefinite);
                 }
-            }
+           // }
         }
 
         public async Task Tick() {
@@ -326,7 +333,7 @@ namespace KoekoeBot
                     nextBonusClip = now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
                     this.logInformation($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name} which will be played at {nextBonusClip.ToShortTimeString()}");
                 }
-                                
+
         }
 
 
@@ -340,7 +347,7 @@ namespace KoekoeBot
             ShouldRun = true;
 
             // Will run a background task working on the announcement queue tasks
-            _ = Task.Factory.StartNew(async () => { await ProcessAnnouncementQueue(this.AnnounceQueue); }, TaskCreationOptions.LongRunning);
+            _ = Task.Factory.StartNew(async () => { await ProcessAnnouncementQueue(); }, TaskCreationOptions.LongRunning);
             
             //This loop ticks every new minute on the systemclock
             while (ShouldRun)
@@ -421,7 +428,7 @@ namespace KoekoeBot
             if (voiceConnection != null)
             {
                 var vnext = Client.GetVoiceNext();
-                await voiceConnection.SendSpeakingAsync(false);
+                voiceConnection.SendSpeakingAsync(false);
                 vnext.GetConnection(voiceConnection.TargetChannel.Guild).Disconnect();
 
                 this.cVoiceConnection = null;

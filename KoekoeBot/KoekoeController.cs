@@ -319,6 +319,9 @@ namespace KoekoeBot
             cronManager.Add(new CronJob(handler.Tick, $"{handler.GetGuildData().guildName}-ticker", new string[] {"* * * * *"}));
             Client.Logger.LogInformation($"Added ticker job to scheduler {e.Guild.Name}");
             
+            // Will run a background task working on the announcement queue tasks
+            _ = Task.Factory.StartNew(async () => { await handler.ProcessAnnouncementQueue(); }, TaskCreationOptions.LongRunning);
+
 
             return Task.CompletedTask;
 
