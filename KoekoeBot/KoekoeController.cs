@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using SimpleWebSocketServerLibrary;
+using CronNET.Impl;
 
 namespace KoekoeBot
 {
@@ -33,14 +34,15 @@ namespace KoekoeBot
         public static CommandsNextExtension Commands { get; set; }
         public static VoiceNextExtension Voice { get; set; }
 
+        private static readonly CronDaemon cronManager = new CronDaemon();            
+
+
         //Guild id -> GuildHandler
         static Dictionary<ulong, GuildHandler> _instances;     
 
         public static async Task RunBot()
         {
             _instances = new Dictionary<ulong, GuildHandler>();
-
-            
 
             string data_path = Path.Combine(Environment.CurrentDirectory, "volume", "data");
             if (!Directory.Exists(data_path))
@@ -92,7 +94,14 @@ namespace KoekoeBot
 
             await Client.ConnectAsync();
 
+            cronManager.JobExecuted += CronManager_JobExecuted;
+            cronManager.Start(new System.Threading.CancellationToken());
+
             await Task.Delay(-1); //Prevent premature quitting, TODO: find a nice way to gracefully exit
+        }
+
+        private static void CronManager_JobExecuted(object sender, string jobName) {
+            Client.Logger.LogInformation($"Executing {jobName}");
         }
 
         private static Task Client_Ready(DiscordClient sender, ReadyEventArgs e)
@@ -300,13 +309,17 @@ namespace KoekoeBot
             handler.GetGuildData().guildName = e.Guild.Name; // todo: find a better place
             handler.UpdateSamplelist();
 
-            if (!handler.IsRunning) //Run the handler loop if it's not already started
-            {
-                // Will run a background task for each guild
-                var _ = Task.Factory.StartNew(async ()=> { await handler.Execute(); }, TaskCreationOptions.LongRunning);
-            }
-                
+            // if (!handler.IsRunning) //Run the handler loop if it's not already started
+            // {
+            //     // Will run a background task for each guild
+            //     var _ = Task.Factory.StartNew(async ()=> { await handler.Execute(); }, TaskCreationOptions.LongRunning);
+            // }
+
+            //Setup cron job for tick here (run every minute)
+            cronManager.Add(new CronJob(handler.Tick, $"{handler.GetGuildData().guildName}-ticker", new string[] {"* * * * *"}));
+            Client.Logger.LogInformation($"Added ticker job to scheduler {e.Guild.Name}");
             
+
             return Task.CompletedTask;
 
         }

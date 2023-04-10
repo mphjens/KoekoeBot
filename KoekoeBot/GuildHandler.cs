@@ -270,20 +270,8 @@ namespace KoekoeBot
             }
         }
 
-        public async Task Execute()
-        {
-            
-            this.logInformation($"Executing timekeeper loop for {this.guildData.guildName}");
-            IsRunning = true;
-            ShouldRun = true;
-
-            // Will run a background task working on the announcement queue tasks
-            _ = Task.Factory.StartNew(async () => { await ProcessAnnouncementQueue(this.AnnounceQueue); }, TaskCreationOptions.LongRunning);
-            
-            //This loop ticks every new minute on the systemclock
-            while (ShouldRun)
-            {
-                DateTime now = DateTime.Now;
+        public async Task Tick() {
+            DateTime now = DateTime.Now;
 
                 int alarmCountStart = alarms.Count;
                 //Check if we need to trigger an alarm
@@ -338,10 +326,29 @@ namespace KoekoeBot
                     nextBonusClip = now.AddMinutes(this.minBonusInterval + (int)(rnd.NextDouble() * this.variableBonusInterval));
                     this.logInformation($"Selected {extraClipFiles[clipIndex]} as bonus clip for {this.Guild.Name} which will be played at {nextBonusClip.ToShortTimeString()}");
                 }
+                                
+        }
+
+
+        // Deprecated way to run an indefinite loop calling tick every minute.
+        public async Task Execute()
+        {
+            DateTime now = DateTime.Now;
+
+            this.logInformation($"Executing timekeeper loop for {this.guildData.guildName}");
+            IsRunning = true;
+            ShouldRun = true;
+
+            // Will run a background task working on the announcement queue tasks
+            _ = Task.Factory.StartNew(async () => { await ProcessAnnouncementQueue(this.AnnounceQueue); }, TaskCreationOptions.LongRunning);
+            
+            //This loop ticks every new minute on the systemclock
+            while (ShouldRun)
+            {
+                await Tick();
 
                 //Calculate the number of miliseconds until a new minute on the system clock (fix? add one second to account for task.delay() inaccuracy)
                 double millisToNextMinute = (double)((60 * 1000) - now.TimeOfDay.TotalMilliseconds % (60 * 1000));
-
                 await Task.Delay((int)millisToNextMinute + 1000);
             }
 
