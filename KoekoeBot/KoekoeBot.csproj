@@ -6,10 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Emzi0767.Common" Version="2.8.0" />
     <PackageReference Include="MP3Sharp" Version="1.0.5" />
-    <PackageReference Include="DSharpPlus" Version="4.3.0-nightly-01116" />
-    <PackageReference Include="DSharpPlus.CommandsNext" Version="4.3.0-nightly-01116" />
-    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.3.0-nightly-01116" />
+    <PackageReference Include="DSharpPlus" Version="4.4.6" />
+    <PackageReference Include="DSharpPlus.CommandsNext" Version="4.4.6" />
+    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.4.6" />
   </ItemGroup>
 
 </Project>
