@@ -18,6 +18,7 @@ namespace KoekoeBot
     using Microsoft.Extensions.Logging;
     using DSharpPlus.SlashCommands;
     using DSharpPlus.Interactivity.Extensions;
+    using DSharpPlus;
 
     class KoekoeSlashCommands : ApplicationCommandModule
     {
@@ -241,6 +242,10 @@ namespace KoekoeBot
         [SlashCommand("search", "Search for samples")]
         public async Task Search(InteractionContext ctx, [Option("query", "search query")] string searchQuery)
         {
+            // Acknowledge the command
+            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
+                .WithContent("Preparing result..."));
+
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<SampleData> samples = handler.GetGuildData().samples
                 .Where(x => x.exists)
@@ -253,7 +258,9 @@ namespace KoekoeBot
             StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
 
             var pages = interactivity.GeneratePagesInEmbed(tableBuilder.ToString());
-            await ctx.Channel.SendPaginatedMessageAsync(ctx.Member, pages);
+            await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages, timeoutoverride: TimeSpan.FromMinutes(2));
+
+            await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Done!"));
         }
 
         [SlashCommand("samples", "List available samples")]
@@ -262,7 +269,9 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.exists).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
 
-            await ctx.CreateResponseAsync("test");
+            // Acknowledge the command
+            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
+                .WithContent("Preparing result..."));
 
             const int COLS = 2;
             const int COL_WIDTH = 40;
@@ -300,8 +309,9 @@ namespace KoekoeBot
 
             var interactivity = ctx.Client.GetInteractivity();
             var pages = interactivity.GeneratePagesInEmbed(content);
-            await ctx.Channel.SendPaginatedMessageAsync(ctx.Member, pages);
+            await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages, timeoutoverride: TimeSpan.FromMinutes(2));
 
+            await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Done!"));
         }
 
         [SlashCommand("updatesamples", "Debug command; updates the list of available samples")]
