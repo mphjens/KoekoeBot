@@ -335,7 +335,7 @@ namespace KoekoeBot
         }
 
 
-        [Command("p"), Description("Play a sample, use !kk samples command to see a list of available samples")]
+        [Command("play"), Description("Play a sample, use !kk samples command to see a list of available samples")]
         public async Task p(InteractionContext ctx, [Option("nameoralias", "sample number from !kk samples command or alias")] string sampleNameOrAlias)
         {
             // get member's voice state
