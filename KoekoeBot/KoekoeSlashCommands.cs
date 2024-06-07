@@ -257,7 +257,7 @@ namespace KoekoeBot
             var interactivity = ctx.Client.GetInteractivity();
             StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
 
-            var pages = interactivity.GeneratePagesInEmbed(tableBuilder.ToString());
+            var pages = interactivity.GeneratePagesInEmbed($"```Koekoe search result:\n\n{tableBuilder.ToString()}```", DSharpPlus.Interactivity.Enums.SplitType.Line);
             await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages);
 
             await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Done!"));
@@ -308,7 +308,7 @@ namespace KoekoeBot
 
 
             var interactivity = ctx.Client.GetInteractivity();
-            var pages = interactivity.GeneratePagesInEmbed(content);
+            var pages = interactivity.GeneratePagesInEmbed($"```{content}```", DSharpPlus.Interactivity.Enums.SplitType.Line);
             await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages, timeoutoverride: TimeSpan.FromMinutes(2));
 
             await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Done!"));
