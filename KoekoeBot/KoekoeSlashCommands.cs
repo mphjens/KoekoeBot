@@ -262,6 +262,8 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.exists).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
 
+            await ctx.CreateResponseAsync("test");
+
             const int COLS = 2;
             const int COL_WIDTH = 40;
 
