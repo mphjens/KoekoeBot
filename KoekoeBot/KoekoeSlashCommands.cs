@@ -107,7 +107,7 @@ namespace KoekoeBot
             await ctx.CreateResponseAsync($"Currently not registered to any channel, use `!kk register` while in a voice channel to add it.");
         }
 
-        [SlashCommand("cancelalarm", "cancels an alarm by name (you can only cancel your own alarms)")]
+        [SlashCommand("cancelalarm", "cancels an alarm by name, you can only cancel your own alarms")]
         public async Task CancelAlarm(InteractionContext ctx, [Option("alarmname", "Name of the alarm to cancel")] string alarmname)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
@@ -129,7 +129,7 @@ namespace KoekoeBot
 
 
         [SlashCommand("setalarm", "set an alarm for your current voicechannel")]
-        public async Task SetAlarm(InteractionContext ctx, [Option("alarm name", "name of the new alarm")] string alarmname, [Option("sample id", "id of sample to play on alarm")] string sampleidstr, [Option("alarm time", "Alarm time ex: 4:20 or 15:34")] string datestring)
+        public async Task SetAlarm(InteractionContext ctx, [Option("alarmname", "name of the new alarm")] string alarmname, [Option("sampleid", "id of sample to play on alarm")] string sampleidstr, [Option("alarmtime", "Alarm time ex: 4:20 or 15:34")] string datestring)
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
@@ -169,8 +169,8 @@ namespace KoekoeBot
             await ctx.CreateResponseAsync($"Registered alarm `{alarmname}` to `{ctx.User.Username}`");
         }
 
-        [SlashCommand("setalarm", "set an alarm for your current voicechannel")]
-        public async Task AddSample(InteractionContext ctx, [Option("sample name", "name of the new sample")] string samplename)
+        [SlashCommand("add", "add new sample by attaching a file to this message")]
+        public async Task AddSample(InteractionContext ctx, [Option("samplename", "name of the new sample")] string samplename)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
             if (handler != null)
@@ -207,30 +207,8 @@ namespace KoekoeBot
 
         }
 
-        ////TODO: remove or maybe limit these debug commands
-        //[SlashCommand("setalarm", "set an alarm for your current voicechannel")Command("Announce"), Hidden, Description("DEBUG: Announces an audio file to all registered channels in the sender's guild")]
-        //public async Task Announce(CommandContext ctx, [RemainingText, Description("path to the file to play.")] string filename)
-        //{
-        //    GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-        //    if (handler != null)
-        //    {
-        //        await ctx.RespondAsync($"Will announce `{filename}`");
-        //        handler.AnnounceFile(filename);
-        //        await ctx.RespondAsync($"Done announcing `{filename}`");
-        //    }
-
-        //}
-
-        // [Command("cleardata"), Description("clear all data from this guild")]
-        // public async Task ClearData(CommandContext ctx)
-        // {
-        //     GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-        //     handler.ClearGuildData();
-        //     await ctx.RespondAsync($"Cleared all data for this guild");
-        // }
-
         [SlashCommand("alias", "add an alias for a sample")]
-        public async Task AddAlias(InteractionContext ctx, [Option("sample name", "the sample to create an alias for")] string samplename, [Option("alias", "create a new alias for a given sample")] string alias)
+        public async Task AddAlias(InteractionContext ctx, [Option("samplename", "the sample to create an alias for")] string samplename, [Option("alias", "create a new alias for a given sample")] string alias)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
 
@@ -245,7 +223,7 @@ namespace KoekoeBot
         }
 
         [SlashCommand("removealias", "remove an alias from a sample")]
-        public async Task RemoveAlias(InteractionContext ctx, [Option("sample name", "the sample to create an alias for")] string samplename, [Option("alias", "alias to remove")] string alias)
+        public async Task RemoveAlias(InteractionContext ctx, [Option("samplename", "the sample to create an alias for")] string samplename, [Option("alias", "alias to remove")] string alias)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
 
@@ -271,17 +249,17 @@ namespace KoekoeBot
 
             int max_rows = 50;
             DiscordMessageBuilder builder = new DiscordMessageBuilder();
-            
-            for (int i = 0; i < samples.Count; i+=max_rows)
+
+            for (int i = 0; i < samples.Count; i += max_rows)
             {
                 // SampleData sample = samples[i];
 
                 // content += $"{sample.SampleAliases[0]}. {sample.Name}\t|\t {sample.PlayCount} plays\t|\t Aliases: {String.Join(',', sample.SampleAliases.Skip(1))} \t|\t {(sample.enabled ? "ENABLED" : "DISABLED")}\n";
-                StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Skip(i).Take(max_rows).Select(x=> new string[] {x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',',x.SampleAliases.Skip(1)), x.enabled.ToString()}).ToArray(), new string[] {"Id", "Name", "PlayCount", "Aliases", "Enabled"});
-                
+                StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Skip(i).Take(max_rows).Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
+
                 builder.Content = $"```Koekoe search result:\n\n{tableBuilder.ToString()}```";
                 await builder.SendAsync(ctx.Channel);
-                builder = new DiscordMessageBuilder();                
+                builder = new DiscordMessageBuilder();
             }
         }
 
@@ -297,15 +275,15 @@ namespace KoekoeBot
 
             DiscordMessageBuilder builder = new DiscordMessageBuilder();
             string header = @"
-  ▄█   ▄█▄  ▄██████▄     ▄████████    ▄█   ▄█▄  ▄██████▄     ▄████████ 
-  ███ ▄███▀ ███    ███   ███    ███   ███ ▄███▀ ███    ███   ███    ███ 
-  ███▐██▀   ███    ███   ███    █▀    ███▐██▀   ███    ███   ███    █▀  
- ▄█████▀    ███    ███  ▄███▄▄▄      ▄█████▀    ███    ███  ▄███▄▄▄     
-▀▀█████▄    ███    ███ ▀▀███▀▀▀     ▀▀█████▄    ███    ███ ▀▀███▀▀▀     
-  ███▐██▄   ███    ███   ███    █▄    ███▐██▄   ███    ███   ███    █▄  
-  ███ ▀███▄ ███    ███   ███    ███   ███ ▀███▄ ███    ███   ███    ███ 
-  ███   ▀█▀  ▀██████▀    ██████████   ███   ▀█▀  ▀██████▀    ██████████ 
-  ▀  ";
+          ▄█   ▄█▄  ▄██████▄     ▄████████    ▄█   ▄█▄  ▄██████▄     ▄████████ 
+          ███ ▄███▀ ███    ███   ███    ███   ███ ▄███▀ ███    ███   ███    ███ 
+          ███▐██▀   ███    ███   ███    █▀    ███▐██▀   ███    ███   ███    █▀  
+         ▄█████▀    ███    ███  ▄███▄▄▄      ▄█████▀    ███    ███  ▄███▄▄▄     
+        ▀▀█████▄    ███    ███ ▀▀███▀▀▀     ▀▀█████▄    ███    ███ ▀▀███▀▀▀     
+          ███▐██▄   ███    ███   ███    █▄    ███▐██▄   ███    ███   ███    █▄  
+          ███ ▀███▄ ███    ███   ███    ███   ███ ▀███▄ ███    ███   ███    ███ 
+          ███   ▀█▀  ▀██████▀    ██████████   ███   ▀█▀  ▀██████▀    ██████████ 
+          ▀  ";
             string content = $"{header}\nAvailable Samples,\nuse !kk p {"number"} to play the sample.\n\n";
             //Send remaining
             builder.Content = $"```{content}```";
@@ -358,7 +336,7 @@ namespace KoekoeBot
 
 
         [Command("p"), Description("Play a sample, use !kk samples command to see a list of available samples")]
-        public async Task p(InteractionContext ctx, [Option("sample name or alias", "sample number from !kk samples command or alias")] string sampleNameOrAlias)
+        public async Task p(InteractionContext ctx, [Option("nameoralias", "sample number from !kk samples command or alias")] string sampleNameOrAlias)
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
@@ -371,20 +349,23 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
 
             SampleData sample = handler.getSample(sampleNameOrAlias);
-            if(sample != null && sample.enabled){
+            if (sample != null && sample.enabled)
+            {
                 List<DiscordChannel> channels = new List<DiscordChannel>();
                 channels.Add(vstat.Channel);
                 handler.AnnounceSample(sampleNameOrAlias, 1, channels); //each sample has it's sample number as an alias
-            } else {
+            }
+            else
+            {
                 await ctx.CreateResponseAsync($"{sampleNameOrAlias} {(sample == null ? "does not exist" : "is disabled")} :(");
             }
-            
-            
+
+
         }
 
         //Used for debugging the voicenext and ffmpeg stuff
         [Command("playfile"), Description("DEBUG: Plays audio by filename.")]
-        public async Task Play(InteractionContext ctx, [RemainingText, Description("path to the file to play.")] string filename)
+        public async Task Play(InteractionContext ctx, [Option("filepath", "path to the file to play.")] string filename)
         {
             await ctx.DeferAsync();
             // get member's voice state
