@@ -258,7 +258,7 @@ namespace KoekoeBot
             StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
 
             var pages = interactivity.GeneratePagesInEmbed(tableBuilder.ToString());
-            await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages, timeoutoverride: TimeSpan.FromMinutes(2));
+            await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages);
 
             await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Done!"));
         }

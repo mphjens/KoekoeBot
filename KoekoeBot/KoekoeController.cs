@@ -15,6 +15,9 @@ using System.Threading.Tasks;
 using System.Linq;
 using SimpleWebSocketServerLibrary;
 using DSharpPlus.SlashCommands;
+using DSharpPlus.Interactivity;
+using DSharpPlus.Interactivity.Enums;
+using DSharpPlus.Interactivity.Extensions;
 
 namespace KoekoeBot
 {
@@ -80,6 +83,11 @@ namespace KoekoeBot
                 EnableMentionPrefix = true,
             };
             Commands = Client.UseCommandsNext(ccfg);
+            var interactivity = Client.UseInteractivity(new InteractivityConfiguration
+            {
+                PaginationBehaviour = PaginationBehaviour.WrapAround,
+                Timeout = TimeSpan.FromMinutes(2),
+            });
             var slash = Client.UseSlashCommands();
 
 
@@ -88,6 +96,7 @@ namespace KoekoeBot
 
             Commands.RegisterCommands<KoekoeCommands>();
             slash.RegisterCommands<KoekoeSlashCommands>();
+
 
 
             Voice = Client.UseVoiceNext();
