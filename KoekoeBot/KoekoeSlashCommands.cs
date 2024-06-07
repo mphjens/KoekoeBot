@@ -17,6 +17,7 @@ namespace KoekoeBot
     using System.Text;
     using Microsoft.Extensions.Logging;
     using DSharpPlus.SlashCommands;
+    using DSharpPlus.Interactivity.Extensions;
 
     class KoekoeSlashCommands : ApplicationCommandModule
     {
@@ -247,20 +248,12 @@ namespace KoekoeBot
                 .OrderBy((x) => int.Parse(x.SampleAliases[0]))
                 .ToList();
 
-            int max_rows = 50;
-            DiscordMessageBuilder builder = new DiscordMessageBuilder();
 
-            for (int i = 0; i < samples.Count; i += max_rows)
-            {
-                // SampleData sample = samples[i];
+            var interactivity = ctx.Client.GetInteractivity();
+            StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
 
-                // content += $"{sample.SampleAliases[0]}. {sample.Name}\t|\t {sample.PlayCount} plays\t|\t Aliases: {String.Join(',', sample.SampleAliases.Skip(1))} \t|\t {(sample.enabled ? "ENABLED" : "DISABLED")}\n";
-                StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Skip(i).Take(max_rows).Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
-
-                builder.Content = $"```Koekoe search result:\n\n{tableBuilder.ToString()}```";
-                await builder.SendAsync(ctx.Channel);
-                builder = new DiscordMessageBuilder();
-            }
+            var pages = interactivity.GeneratePagesInEmbed(tableBuilder.ToString());
+            await ctx.Channel.SendPaginatedMessageAsync(ctx.Member, pages);
         }
 
         [SlashCommand("samples", "List available samples")]
@@ -269,11 +262,9 @@ namespace KoekoeBot
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.exists).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
 
-            const int ROWS = 50;
             const int COLS = 2;
             const int COL_WIDTH = 40;
 
-            DiscordMessageBuilder builder = new DiscordMessageBuilder();
             string header = @"
           ▄█   ▄█▄  ▄██████▄     ▄████████    ▄█   ▄█▄  ▄██████▄     ▄████████ 
           ███ ▄███▀ ███    ███   ███    ███   ███ ▄███▀ ███    ███   ███    ███ 
@@ -285,11 +276,6 @@ namespace KoekoeBot
           ███   ▀█▀  ▀██████▀    ██████████   ███   ▀█▀  ▀██████▀    ██████████ 
           ▀  ";
             string content = $"{header}\nAvailable Samples,\nuse !kk p {"number"} to play the sample.\n\n";
-            //Send remaining
-            builder.Content = $"```{content}```";
-            await builder.SendAsync(ctx.Channel);
-            builder = new DiscordMessageBuilder();
-            content = "";
 
             int lastLen = 0;
             for (int i = 0; i < samples.Count + 1; i += COLS)
@@ -307,22 +293,12 @@ namespace KoekoeBot
 
                     lastLen = entry.Length;
                 }
-
-                if (i > COLS && i % ROWS < COLS) // Limit the number of rows in a single message
-                {
-                    builder.Content = $"```{content}```";
-                    await builder.SendAsync(ctx.Channel);
-                    builder = new DiscordMessageBuilder();
-                    content = "";
-                }
             }
 
-            //Send remaining content in buffer
-            if (content.Length > 0)
-            {
-                builder.Content = $"```{content}```";
-                await builder.SendAsync(ctx.Channel);
-            }
+
+            var interactivity = ctx.Client.GetInteractivity();
+            var pages = interactivity.GeneratePagesInEmbed(content);
+            await ctx.Channel.SendPaginatedMessageAsync(ctx.Member, pages);
 
         }
 
