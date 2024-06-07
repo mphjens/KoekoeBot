@@ -330,8 +330,7 @@ namespace KoekoeBot
             await ctx.CreateResponseAsync("Sample list updated");
         }
 
-
-        [Command("play"), Description("Play a sample, use !kk samples command to see a list of available samples")]
+        [SlashCommand("play", "Play a sample, use !kk samples command to see a list of available samples")]
         public async Task p(InteractionContext ctx, [Option("nameoralias", "sample number from !kk samples command or alias")] string sampleNameOrAlias)
         {
             // get member's voice state
@@ -359,8 +358,7 @@ namespace KoekoeBot
 
         }
 
-        //Used for debugging the voicenext and ffmpeg stuff
-        [Command("playfile"), Description("DEBUG: Plays audio by filename.")]
+        [SlashCommand("playfile", "DEBUG: Plays audio by filename.")]
         public async Task Play(InteractionContext ctx, [Option("filepath", "path to the file to play.")] string filename)
         {
             await ctx.DeferAsync();
