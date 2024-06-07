@@ -14,6 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using SimpleWebSocketServerLibrary;
+using DSharpPlus.SlashCommands;
 
 namespace KoekoeBot
 {
@@ -79,11 +80,15 @@ namespace KoekoeBot
                 EnableMentionPrefix = true,
             };
             Commands = Client.UseCommandsNext(ccfg);
+            var slash = Client.UseSlashCommands();
+
 
             Commands.CommandExecuted += Commands_CommandExecuted;
             Commands.CommandErrored += Commands_CommandErrored;
 
             Commands.RegisterCommands<KoekoeCommands>();
+            slash.RegisterCommands<KoekoeSlashCommands>();
+
 
             Voice = Client.UseVoiceNext();
 
