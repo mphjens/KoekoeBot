@@ -61,6 +61,7 @@ namespace KoekoeBot
                 Token = cfgjson.Token,
                 TokenType = TokenType.Bot,
                 AutoReconnect = true,
+                Intents = DiscordIntents.Guilds | DiscordIntents.GuildMessages | DiscordIntents.GuildVoiceStates,
                 MinimumLogLevel = LogLevel.Information//LogLevel.Debug,
             };
 
