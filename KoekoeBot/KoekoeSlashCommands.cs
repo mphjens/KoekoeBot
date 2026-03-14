@@ -1,98 +1,81 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading.Tasks;
+using DSharpPlus.Commands;                                          // [Command], CommandContext
+using DSharpPlus.Commands.Processors.SlashCommands;                // SlashCommandContext
+using DSharpPlus.Entities;
+using DSharpPlus.Interactivity;
+using DSharpPlus.Interactivity.Enums;
+using DSharpPlus.Interactivity.Extensions;
+using DSharpPlus.VoiceNext;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KoekoeBot
 {
-
-    using System;
-    using System.Linq;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Runtime.InteropServices;
-    using System.Threading.Tasks;
-    using DSharpPlus.CommandsNext;
-    using DSharpPlus.CommandsNext.Attributes;
-    using DSharpPlus.Entities;
-    using DSharpPlus.VoiceNext;
-    using System.Net;
-    using System.Text;
-    using Microsoft.Extensions.Logging;
-    using DSharpPlus.SlashCommands;
-    using DSharpPlus.Interactivity.Extensions;
-    using DSharpPlus;
-    using Microsoft.Extensions.DependencyInjection;
-    using DSharpPlus.Interactivity;
-    using DSharpPlus.Interactivity.Enums;
-
-    class KoekoeSlashCommands : ApplicationCommandModule
+    // No base class in v5
+    class KoekoeSlashCommands
     {
-
-        [SlashCommand("register", "registers your current voice channel as a channel to anounce in.")]
-        public async Task RegisterChannel(InteractionContext ctx)
+        [Command("register"), System.ComponentModel.Description("registers your current voice channel as a channel to announce in.")]
+        public async Task RegisterChannel(CommandContext ctx)
         {
-            // get member's voice state
             var vstat = ctx.Member?.VoiceState;
             if (vstat?.ChannelId == null)
             {
-                // they did not specify a channel and are not in one
-                await ctx.CreateResponseAsync("You are not in a voice channel.");
+                await ctx.RespondAsync("You are not in a voice channel.");
                 return;
             }
             var voiceChannel = await vstat.GetChannelAsync();
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, voiceChannel.Guild, true);
             if (handler != null)
-                handler.AddChannel(voiceChannel); //Could throw access violation because we run the handlers async, this needs fixing
+                handler.AddChannel(voiceChannel);
 
-            await ctx.CreateResponseAsync($"Registered to `{voiceChannel.Name}`");
+            await ctx.RespondAsync($"Registered to `{voiceChannel.Name}`");
         }
 
-        [SlashCommand("unregister", "removes registration from your current voice channel.")]
-        public async Task UnregisterChannel(InteractionContext ctx)
+        [Command("unregister"), System.ComponentModel.Description("removes registration from your current voice channel.")]
+        public async Task UnregisterChannel(CommandContext ctx)
         {
-            // get member's voice state
             var vstat = ctx.Member?.VoiceState;
             if (vstat?.ChannelId == null)
             {
-                // they did not specify a channel and are not in one
-                await ctx.CreateResponseAsync("You are not in a voice channel.");
+                await ctx.RespondAsync("You are not in a voice channel.");
                 return;
             }
             var voiceChannel = await vstat.GetChannelAsync();
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, voiceChannel.Guild, false);
             if (handler != null)
             {
-                handler.RemoveChannel(voiceChannel); //Could throw access violation because we run the handlers async, this needs fixing
-                await ctx.CreateResponseAsync($"Unregistered `{voiceChannel.Name}`");
+                handler.RemoveChannel(voiceChannel);
+                await ctx.RespondAsync($"Unregistered `{voiceChannel.Name}`");
                 return;
             }
-
-            await ctx.CreateResponseAsync("No channels registered yet.");
+            await ctx.RespondAsync("No channels registered yet.");
         }
 
-
-        [SlashCommand("listregister", "lists all registered voice channels.")]
-        public async Task ListRegister(InteractionContext ctx)
+        [Command("listregister"), System.ComponentModel.Description("lists all registered voice channels.")]
+        public async Task ListRegister(CommandContext ctx)
         {
-
-            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Channel.Guild, false);
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, false);
             if (handler != null)
             {
                 string[] names = await handler.GetRegisteredChannelNames();
-                string channelstext = String.Join("`, `", names);
-
-                await ctx.CreateResponseAsync($"Currently registered to: `{channelstext}`");
+                await ctx.RespondAsync($"Currently registered to: `{String.Join("`, `", names)}`");
                 return;
             }
-
-
-            await ctx.CreateResponseAsync($"Currently not registered to any channel, use `!kk register` while in a voice channel to add it.");
+            await ctx.RespondAsync("Currently not registered to any channel, use `/register` while in a voice channel to add it.");
         }
 
-
-        [SlashCommand("listalarms", "lists all registered alarms.")]
-        public async Task ListAlarm(InteractionContext ctx)
+        [Command("listalarms"), System.ComponentModel.Description("lists all registered alarms.")]
+        public async Task ListAlarm(CommandContext ctx)
         {
-
-            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Channel.Guild, false);
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, false);
             if (handler != null)
             {
                 List<AlarmData> alarms = handler.GetAlarms();
@@ -102,18 +85,16 @@ namespace KoekoeBot
                     DiscordMember member = await ctx.Guild.GetMemberAsync(alarms[i].userId);
                     alarmtexts[i] = $"{member.Username}: {alarms[i].AlarmDate.ToShortTimeString()} ({alarms[i].AlarmName})";
                 }
-                string alarmstext = String.Join("`\n`", alarmtexts);
-
-                await ctx.CreateResponseAsync($"Alarms:\n{alarmstext}");
+                await ctx.RespondAsync($"Alarms:\n{String.Join("`\n`", alarmtexts)}");
                 return;
             }
-
-
-            await ctx.CreateResponseAsync($"Currently not registered to any channel, use `!kk register` while in a voice channel to add it.");
+            await ctx.RespondAsync("Currently not registered to any channel, use `/register` while in a voice channel to add it.");
         }
 
-        [SlashCommand("cancelalarm", "cancels an alarm by name, you can only cancel your own alarms")]
-        public async Task CancelAlarm(InteractionContext ctx, [Option("alarmname", "Name of the alarm to cancel")] string alarmname)
+        [Command("cancelalarm"), System.ComponentModel.Description("cancels an alarm by name (you can only cancel your own alarms)")]
+        public async Task CancelAlarm(
+            CommandContext ctx,
+            [System.ComponentModel.Description("Name of the alarm to cancel")] string alarmname)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<AlarmData> alarms = handler.GetAlarms();
@@ -123,224 +104,164 @@ namespace KoekoeBot
                 {
                     alarms.RemoveAt(i);
                     handler.SaveGuildData();
-                    await ctx.CreateResponseAsync($"Canceled alarm `{alarmname}`");
-
+                    await ctx.RespondAsync($"Canceled alarm `{alarmname}`");
                     return;
                 }
             }
-
-            await ctx.CreateResponseAsync($"Couldn't find alarm `{alarmname}`");
+            await ctx.RespondAsync($"Couldn't find alarm `{alarmname}`");
         }
 
-
-        [SlashCommand("setalarm", "set an alarm for your current voicechannel")]
-        public async Task SetAlarm(InteractionContext ctx, [Option("alarmname", "name of the new alarm")] string alarmname, [Option("sampleid", "id of sample to play on alarm")] string sampleidstr, [Option("alarmtime", "Alarm time ex: 4:20 or 15:34")] string datestring)
+        [Command("setalarm"), System.ComponentModel.Description("set an alarm for your current voicechannel")]
+        public async Task SetAlarm(
+            CommandContext ctx,
+            [System.ComponentModel.Description("name of the new alarm")] string alarmname,
+            [System.ComponentModel.Description("id of sample to play on alarm")] string sampleidstr,
+            [System.ComponentModel.Description("Alarm time e.g. 4:20 or 15:34")] string datestring)
         {
-            // get member's voice state
             var vstat = ctx.Member?.VoiceState;
             if (vstat?.ChannelId == null)
             {
-                // they did not specify a channel and are not in one
-                await ctx.CreateResponseAsync("You are not in a voice channel.");
+                await ctx.RespondAsync("You are not in a voice channel.");
                 return;
             }
 
-            string[] datestringComps = datestring.Split(':');
-            if (datestringComps.Length == 2)
+            string[] parts = datestring.Split(':');
+            if (parts.Length == 2
+                && int.TryParse(parts[0], out int parsedHours)
+                && int.TryParse(parts[1], out int parsedMinutes)
+                && parsedHours > 0 && parsedHours < 24
+                && parsedMinutes > 0 && parsedMinutes < 60)
             {
-                int parsedHours, parsedMinutes;
-                if (int.TryParse(datestringComps[0], out parsedHours) && int.TryParse(datestringComps[1], out parsedMinutes))
-                {
-                    if (parsedHours > 0 && parsedHours < 24 && parsedMinutes > 0 && parsedMinutes < 60)
-                    {
-                        int hourdiff = (parsedHours - DateTime.Now.Hour) % 24;
-                        if (hourdiff < 0)
-                            hourdiff += 24;
+                int hourdiff = (parsedHours - DateTime.Now.Hour) % 24;
+                if (hourdiff < 0) hourdiff += 24;
+                int mindiff = (parsedMinutes - DateTime.Now.Minute) % 60;
+                DateTime dt = DateTime.Now.AddHours(hourdiff).AddMinutes(mindiff).AddSeconds(-DateTime.Now.Second);
 
-                        int mindiff = (parsedMinutes - DateTime.Now.Minute) % 60;
-                        DateTime dt = DateTime.Now.AddHours(hourdiff).AddMinutes(mindiff).AddSeconds(-DateTime.Now.Second);
-                        var voiceChannel = await vstat.GetChannelAsync();
-                        GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, voiceChannel.Guild, true);
-                        int sampleId = -1;
-                        bool hasSample = int.TryParse(sampleidstr, out sampleId);
-
-
-                        handler.AddAlarm(dt, alarmname, hasSample ? (int?)sampleId : null, ctx.User.Id);
-                    }
-                }
-
+                var voiceChannel = await vstat.GetChannelAsync();
+                GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, voiceChannel.Guild, true);
+                bool hasSample = int.TryParse(sampleidstr, out int sampleId);
+                handler.AddAlarm(dt, alarmname, hasSample ? (int?)sampleId : null, ctx.User.Id);
             }
 
-            await ctx.CreateResponseAsync($"Registered alarm `{alarmname}` to `{ctx.User.Username}`");
+            await ctx.RespondAsync($"Registered alarm `{alarmname}` to `{ctx.User.Username}`");
         }
 
-        [SlashCommand("add", "add new sample by attaching a file to this message")]
-        public async Task AddSample(InteractionContext ctx, [Option("samplename", "name of the new sample")] string samplename)
+        [Command("alias"), System.ComponentModel.Description("add an alias for a sample")]
+        public async Task AddAlias(
+            CommandContext ctx,
+            [System.ComponentModel.Description("the sample to create an alias for")] string samplename,
+            [System.ComponentModel.Description("new alias to assign")] string alias)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-            if (handler != null)
-            {
-                if (samplename.Length == 0)
-                {
-                    await ctx.CreateResponseAsync("Specify a name: `!kk add {samplename}`");
-                    return;
-                }
-                DiscordMessage message = await ctx.GetOriginalResponseAsync();
-                if (message.Attachments.Count > 0 && message.Attachments[0].FileName.EndsWith(".mp3"))
-                {
-                    string samplepath = Path.Join(handler.getSampleBasePath(), handler.getFileNameForSampleName(samplename));
-                    using (var client = new WebClient())
-                    {
-                        client.DownloadFile(new System.Uri(message.Attachments[0].ProxyUrl), $"{samplepath}");
-                    }
-
-                    SampleData sample = handler.AddSampleFromFile(samplepath, samplename);
-
-                    handler.SaveGuildData();
-
-                    await ctx.CreateResponseAsync($"Added {samplename} use !kk p [{String.Join(',', sample.SampleAliases)},{sample.Name}] to play the sample in your current voice channel");
-                }
-                else
-                {
-                    await ctx.CreateResponseAsync($"No file attached, attach a mp3 file to your message");
-                }
-            }
-            else
-            {
-                await ctx.CreateResponseAsync($"I can't run this command from here - ask me in a discord server.");
-            }
-
-        }
-
-        [SlashCommand("alias", "add an alias for a sample")]
-        public async Task AddAlias(InteractionContext ctx, [Option("samplename", "the sample to create an alias for")] string samplename, [Option("alias", "create a new alias for a given sample")] string alias)
-        {
-            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-
             if (handler.AddAlias(samplename, alias))
-            {
-                await ctx.CreateResponseAsync($"Added {alias} as an alias for {samplename}");
-            }
+                await ctx.RespondAsync($"Added {alias} as an alias for {samplename}");
             else
-            {
-                await ctx.CreateResponseAsync($"{alias} is already taken by another sample: {handler.getSample(alias).Name}");
-            }
+                await ctx.RespondAsync($"{alias} is already taken by another sample: {handler.getSample(alias).Name}");
         }
 
-        [SlashCommand("removealias", "remove an alias from a sample")]
-        public async Task RemoveAlias(InteractionContext ctx, [Option("samplename", "the sample to create an alias for")] string samplename, [Option("alias", "alias to remove")] string alias)
+        [Command("removealias"), System.ComponentModel.Description("remove an alias from a sample")]
+        public async Task RemoveAlias(
+            CommandContext ctx,
+            [System.ComponentModel.Description("the sample to remove an alias from")] string samplename,
+            [System.ComponentModel.Description("alias to remove")] string alias)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
-
             if (handler.RemoveAlias(samplename, alias))
-            {
-                await ctx.CreateResponseAsync($"Removed {alias} as an alias for {samplename}");
-            }
+                await ctx.RespondAsync($"Removed {alias} as an alias for {samplename}");
             else
-            {
-                await ctx.CreateResponseAsync($"{alias} is not an alias for {samplename}");
-            }
+                await ctx.RespondAsync($"{alias} is not an alias for {samplename}");
         }
 
-        [SlashCommand("search", "Search for samples")]
-        public async Task Search(InteractionContext ctx, [Option("query", "search query")] string searchQuery)
+        [Command("search"), System.ComponentModel.Description("Search for samples")]
+        public async Task Search(
+            CommandContext ctx,
+            [System.ComponentModel.Description("search query")] string searchQuery)
         {
-            // Acknowledge the command
-            await ctx.CreateResponseAsync(DiscordInteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
-                .WithContent("Preparing result..."));
+            await ctx.DeferResponseAsync();
 
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             List<SampleData> samples = handler.GetGuildData().samples
                 .Where(x => x.exists)
-                .Where(x => x.Name.Contains(searchQuery) || x.SampleAliases.Where(x => x.Contains(searchQuery)).Any())
-                .OrderBy((x) => int.Parse(x.SampleAliases[0]))
+                .Where(x => x.Name.Contains(searchQuery) || x.SampleAliases.Any(a => a.Contains(searchQuery)))
+                .OrderBy(x => int.Parse(x.SampleAliases[0]))
                 .ToList();
 
-            
             var interactivity = ctx.Client.ServiceProvider.GetRequiredService<InteractivityExtension>();
-            StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
+            StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(
+                samples.Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(),
+                new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
 
-            var pages = InteractivityExtension.GeneratePagesInEmbed($"```Koekoe search result:\n\n{tableBuilder.ToString()}```", SplitType.Line);
-            foreach (var page in pages)
-            {
-                page.Content = $"```{page.Content}```";
-            }
+            var pages = InteractivityExtension.GeneratePagesInEmbed(
+                $"```Koekoe search result:\n\n{tableBuilder}```", SplitType.Line);
             await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages);
 
-            await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Done!"));
+            await ctx.EditResponseAsync("Done!");
         }
 
-        [SlashCommand("samples", "List available samples")]
-        public async Task Samples(InteractionContext ctx)
+        [Command("samples"), System.ComponentModel.Description("List available samples")]
+        public async Task Samples(CommandContext ctx)
         {
-            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
-            List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.exists).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
+            await ctx.DeferResponseAsync();
 
-            // Acknowledge the command
-            await ctx.CreateResponseAsync(DiscordInteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
-                .WithContent("Preparing result..."));
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
+            List<SampleData> samples = handler.GetGuildData().samples
+                .Where(x => x.exists)
+                .OrderBy(x => int.Parse(x.SampleAliases[0]))
+                .ToList();
 
             const int COLS = 2;
             const int COL_WIDTH = 40;
 
             string header = @"
-          ▄█   ▄█▄  ▄██████▄     ▄████████    ▄█   ▄█▄  ▄██████▄     ▄████████ 
-          ███ ▄███▀ ███    ███   ███    ███   ███ ▄███▀ ███    ███   ███    ███ 
-          ███▐██▀   ███    ███   ███    █▀    ███▐██▀   ███    ███   ███    █▀  
-         ▄█████▀    ███    ███  ▄███▄▄▄      ▄█████▀    ███    ███  ▄███▄▄▄     
-        ▀▀█████▄    ███    ███ ▀▀███▀▀▀     ▀▀█████▄    ███    ███ ▀▀███▀▀▀     
-          ███▐██▄   ███    ███   ███    █▄    ███▐██▄   ███    ███   ███    █▄  
-          ███ ▀███▄ ███    ███   ███    ███   ███ ▀███▄ ███    ███   ███    ███ 
-          ███   ▀█▀  ▀██████▀    ██████████   ███   ▀█▀  ▀██████▀    ██████████ 
-          ▀  ";
-            string content = $"{header}\nAvailable Samples,\nuse !kk p {"number"} to play the sample.\n\n";
+  ▄█   ▄█▄  ▄██████▄     ▄████████    ▄█   ▄█▄  ▄██████▄     ▄████████ 
+  ███ ▄███▀ ███    ███   ███    ███   ███ ▄███▀ ███    ███   ███    ███ 
+  ███▐██▀   ███    ███   ███    █▀    ███▐██▀   ███    ███   ███    █▀  
+ ▄█████▀    ███    ███  ▄███▄▄▄      ▄█████▀    ███    ███  ▄███▄▄▄     
+▀▀█████▄    ███    ███ ▀▀███▀▀▀     ▀▀█████▄    ███    ███ ▀▀███▀▀▀     
+  ███▐██▄   ███    ███   ███    █▄    ███▐██▄   ███    ███   ███    █▄  
+  ███ ▀███▄ ███    ███   ███    ███   ███ ▀███▄ ███    ███   ███    ███ 
+  ███   ▀█▀  ▀██████▀    ██████████   ███   ▀█▀  ▀██████▀    ██████████ 
+  ▀  ";
+            string content = $"{header}\nAvailable Samples — use /play {{number}} to play.\n\n";
 
             int lastLen = 0;
             for (int i = 0; i < samples.Count + 1; i += COLS)
             {
-
                 for (int j = 0; j < COLS; j++)
                 {
-                    if (i + j >= samples.Count)
-                        break;
-
+                    if (i + j >= samples.Count) break;
                     string entry = $"{samples[i + j].SampleAliases[0]}. {samples[i + j].Name}";
-
-                    content += (j != 0) ? String.Concat(Enumerable.Repeat(" ", COL_WIDTH - lastLen)) + $"{entry}" : $"{entry}";
-                    content += (j == COLS - 1) ? $"\n" : "";
-
+                    content += (j != 0) ? String.Concat(Enumerable.Repeat(" ", COL_WIDTH - lastLen)) + entry : entry;
+                    content += (j == COLS - 1) ? "\n" : "";
                     lastLen = entry.Length;
                 }
             }
 
-
             var interactivity = ctx.Client.ServiceProvider.GetRequiredService<InteractivityExtension>();
-            var pages = InteractivityExtension.GeneratePagesInEmbed(content, DSharpPlus.Interactivity.Enums.SplitType.Line);
-            foreach(var page in pages)
-            {
-                page.Content = $"```{page.Content}```";
-            }
-            await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages, timeoutoverride: TimeSpan.FromMinutes(2));
+            var pages = InteractivityExtension.GeneratePagesInEmbed(content, SplitType.Line);
+            await interactivity.SendPaginatedMessageAsync(ctx.Channel, ctx.User, pages,
+                timeoutoverride: TimeSpan.FromMinutes(2));
 
-            await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Done!"));
+            await ctx.EditResponseAsync("Done!");
         }
 
-        [SlashCommand("updatesamples", "Debug command; updates the list of available samples")]
-        public async Task UpdateSamples(InteractionContext ctx)
+        [Command("updatesamples"), System.ComponentModel.Description("Update the list of available samples")]
+        public async Task UpdateSamples(CommandContext ctx)
         {
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
             handler.UpdateSamplelist();
-            await ctx.CreateResponseAsync("Sample list updated");
+            await ctx.RespondAsync("Sample list updated");
         }
 
-        [SlashCommand("play", "Play a sample, use !kk samples command to see a list of available samples")]
-        public async Task p(InteractionContext ctx, [Option("nameoralias", "sample number from !kk samples command or alias")] string sampleNameOrAlias)
+        [Command("play"), System.ComponentModel.Description("Play a sample — use /samples to see available samples")]
+        public async Task PlaySample(
+            CommandContext ctx,
+            [System.ComponentModel.Description("sample number or alias from /samples")] string sampleNameOrAlias)
         {
-            // get member's voice state
             var vstat = ctx.Member?.VoiceState;
             if (vstat?.ChannelId == null)
             {
-                await ctx.CreateResponseAsync("You are not in a voice channel.");
+                await ctx.RespondAsync("You are not in a voice channel.");
                 return;
             }
             var voiceChannel = await vstat.GetChannelAsync();
@@ -349,39 +270,39 @@ namespace KoekoeBot
             SampleData sample = handler.getSample(sampleNameOrAlias);
             if (sample != null && sample.enabled)
             {
-                List<DiscordChannel> channels = new List<DiscordChannel>();
-                channels.Add(voiceChannel);
-                handler.AnnounceSample(sampleNameOrAlias, 1, channels); //each sample has it's sample number as an alias
+                await ctx.RespondAsync($"Playing `{sample.Name}`");
+                handler.AnnounceSample(sampleNameOrAlias, 1, new List<DiscordChannel> { voiceChannel });
             }
             else
             {
-                await ctx.CreateResponseAsync($"{sampleNameOrAlias} {(sample == null ? "does not exist" : "is disabled")} :(");
+                await ctx.RespondAsync($"{sampleNameOrAlias} {(sample == null ? "does not exist" : "is disabled")} :(");
             }
-
-
         }
 
-        [SlashCommand("playfile", "DEBUG: Plays audio by filename.")]
-        public async Task Play(InteractionContext ctx, [Option("filepath", "path to the file to play.")] string filename)
+        [Command("playfile"), System.ComponentModel.Description("DEBUG: Plays audio by filename.")]
+        public async Task PlayFile(
+            CommandContext ctx,
+            [System.ComponentModel.Description("path to the file to play.")] string filename)
         {
-            await ctx.DeferAsync();
-            // get member's voice state
+            await ctx.DeferResponseAsync();
+
             var vstat = ctx.Member?.VoiceState;
             if (vstat?.ChannelId == null)
             {
-                await ctx.CreateResponseAsync("You are not in a voice channel.");
+                await ctx.RespondAsync("You are not in a voice channel.");
                 return;
             }
 
             if (!File.Exists(filename))
             {
-                await ctx.CreateResponseAsync($"Will not be playing {filename} (file not found)");
+                await ctx.RespondAsync($"Will not be playing {filename} (file not found)");
                 ctx.Client.Logger.LogWarning($"Will not be playing {filename} (file not found)");
+                return;
             }
 
-            DiscordChannel Channel = await vstat.GetChannelAsync();
+            DiscordChannel channel = await vstat.GetChannelAsync();
 
-            // check whether VNext is enabled
+            // In v5 VoiceNext is resolved via DI
             var vnext = ctx.Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
             if (vnext == null)
             {
@@ -389,25 +310,18 @@ namespace KoekoeBot
                 return;
             }
 
-            // check whether we aren't already connected
-            var vnc = vnext.GetConnection(Channel.Guild);
+            var vnc = vnext.GetConnection(channel.Guild);
             if (vnc != null)
             {
                 ctx.Client.Logger.LogWarning("Already connected in this guild.");
                 return;
             }
 
-            // connect
-            vnc = await vnext.ConnectAsync(Channel);
-
-            // wait for current playback to finish
+            vnc = await vnext.ConnectAsync(channel);
             while (vnc.IsPlaying)
-            {
                 await vnc.WaitForPlaybackFinishAsync();
-            }
 
             Exception exc = null;
-
             try
             {
                 await vnc.SendSpeakingAsync(true);
@@ -420,31 +334,27 @@ namespace KoekoeBot
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true
-
                 };
 
                 ctx.Client.Logger.LogInformation($"Will run {psi.FileName} as {psi.Arguments}");
 
                 var ffmpeg = Process.Start(psi);
-                var ffout = ffmpeg.StandardOutput.BaseStream;
-
                 var txStream = vnc.GetTransmitSink();
-                await ffout.CopyToAsync(txStream);
+                await ffmpeg.StandardOutput.BaseStream.CopyToAsync(txStream);
                 await txStream.FlushAsync();
                 await vnc.WaitForPlaybackFinishAsync();
-
             }
             catch (Exception ex) { exc = ex; }
             finally
             {
                 await vnc.SendSpeakingAsync(false);
-                vnext.GetConnection(Channel.Guild).Disconnect();
-                //await ctx.CreateResponseAsync($"Finished playing `{filename}`");
+                vnext.GetConnection(channel.Guild).Disconnect();
             }
 
-            if (exc != null) // TODO: do this in the exception handler?
-                await ctx.CreateResponseAsync($"An exception occured during playback: `{exc.GetType()}: {exc.Message}`");
+            if (exc != null)
+                await ctx.RespondAsync($"An exception occurred during playback: `{exc.GetType()}: {exc.Message}`");
+            else
+                await ctx.RespondAsync($"Finished playing `{filename}`");
         }
     }
 }
-
