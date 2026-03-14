@@ -1,4 +1,7 @@
 ﻿using DSharpPlus;
+using DSharpPlus.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+
 using DSharpPlus.Entities;
 using DSharpPlus.VoiceNext;
 using System;
@@ -382,7 +385,8 @@ namespace KoekoeBot
             }
 
             // check whether VNext is enabled
-            var vnext = Client.GetVoiceNext();
+
+            var vnext = Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
             if (vnext == null)
             {
                 this.logWarning("VoiceNext not configured");
@@ -414,7 +418,7 @@ namespace KoekoeBot
 
             if (voiceConnection != null)
             {
-                var vnext = Client.GetVoiceNext();
+                var vnext = Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
                 await voiceConnection.SendSpeakingAsync(false);
                 vnext.GetConnection(voiceConnection.TargetChannel.Guild).Disconnect();
 

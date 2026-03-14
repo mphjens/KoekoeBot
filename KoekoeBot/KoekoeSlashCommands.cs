@@ -19,6 +19,9 @@ namespace KoekoeBot
     using DSharpPlus.SlashCommands;
     using DSharpPlus.Interactivity.Extensions;
     using DSharpPlus;
+    using Microsoft.Extensions.DependencyInjection;
+    using DSharpPlus.Interactivity;
+    using DSharpPlus.Interactivity.Enums;
 
     class KoekoeSlashCommands : ApplicationCommandModule
     {
@@ -28,18 +31,18 @@ namespace KoekoeBot
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
-            if (vstat?.Channel == null)
+            if (vstat?.ChannelId == null)
             {
                 // they did not specify a channel and are not in one
                 await ctx.CreateResponseAsync("You are not in a voice channel.");
                 return;
             }
-
-            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, vstat.Channel.Guild, true);
+            var voiceChannel = await vstat.GetChannelAsync();
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, voiceChannel.Guild, true);
             if (handler != null)
-                handler.AddChannel(vstat.Channel); //Could throw access violation because we run the handlers async, this needs fixing
+                handler.AddChannel(voiceChannel); //Could throw access violation because we run the handlers async, this needs fixing
 
-            await ctx.CreateResponseAsync($"Registered to `{vstat.Channel.Name}`");
+            await ctx.CreateResponseAsync($"Registered to `{voiceChannel.Name}`");
         }
 
         [SlashCommand("unregister", "removes registration from your current voice channel.")]
@@ -47,18 +50,18 @@ namespace KoekoeBot
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
-            if (vstat?.Channel == null)
+            if (vstat?.ChannelId == null)
             {
                 // they did not specify a channel and are not in one
                 await ctx.CreateResponseAsync("You are not in a voice channel.");
                 return;
             }
-
-            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, vstat.Channel.Guild, false);
+            var voiceChannel = await vstat.GetChannelAsync();
+            GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, voiceChannel.Guild, false);
             if (handler != null)
             {
-                handler.RemoveChannel(vstat.Channel); //Could throw access violation because we run the handlers async, this needs fixing
-                await ctx.CreateResponseAsync($"Unregistered `{vstat.Channel.Name}`");
+                handler.RemoveChannel(voiceChannel); //Could throw access violation because we run the handlers async, this needs fixing
+                await ctx.CreateResponseAsync($"Unregistered `{voiceChannel.Name}`");
                 return;
             }
 
@@ -135,7 +138,7 @@ namespace KoekoeBot
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
-            if (vstat?.Channel == null)
+            if (vstat?.ChannelId == null)
             {
                 // they did not specify a channel and are not in one
                 await ctx.CreateResponseAsync("You are not in a voice channel.");
@@ -156,8 +159,8 @@ namespace KoekoeBot
 
                         int mindiff = (parsedMinutes - DateTime.Now.Minute) % 60;
                         DateTime dt = DateTime.Now.AddHours(hourdiff).AddMinutes(mindiff).AddSeconds(-DateTime.Now.Second);
-
-                        GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, vstat.Channel.Guild, true);
+                        var voiceChannel = await vstat.GetChannelAsync();
+                        GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, voiceChannel.Guild, true);
                         int sampleId = -1;
                         bool hasSample = int.TryParse(sampleidstr, out sampleId);
 
@@ -243,7 +246,7 @@ namespace KoekoeBot
         public async Task Search(InteractionContext ctx, [Option("query", "search query")] string searchQuery)
         {
             // Acknowledge the command
-            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
+            await ctx.CreateResponseAsync(DiscordInteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
                 .WithContent("Preparing result..."));
 
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild);
@@ -253,11 +256,11 @@ namespace KoekoeBot
                 .OrderBy((x) => int.Parse(x.SampleAliases[0]))
                 .ToList();
 
-
-            var interactivity = ctx.Client.GetInteractivity();
+            
+            var interactivity = ctx.Client.ServiceProvider.GetRequiredService<InteractivityExtension>();
             StringBuilder tableBuilder = AsciiTableGenerators.AsciiTableGenerator.CreateAsciiTableFromValues(samples.Select(x => new string[] { x.SampleAliases[0], x.Name, x.PlayCount.ToString(), String.Join(',', x.SampleAliases.Skip(1)), x.enabled.ToString() }).ToArray(), new string[] { "Id", "Name", "PlayCount", "Aliases", "Enabled" });
 
-            var pages = interactivity.GeneratePagesInEmbed($"```Koekoe search result:\n\n{tableBuilder.ToString()}```", DSharpPlus.Interactivity.Enums.SplitType.Line);
+            var pages = InteractivityExtension.GeneratePagesInEmbed($"```Koekoe search result:\n\n{tableBuilder.ToString()}```", SplitType.Line);
             foreach (var page in pages)
             {
                 page.Content = $"```{page.Content}```";
@@ -274,7 +277,7 @@ namespace KoekoeBot
             List<SampleData> samples = handler.GetGuildData().samples.Where(x => x.exists).OrderBy((x) => int.Parse(x.SampleAliases[0])).ToList();
 
             // Acknowledge the command
-            await ctx.CreateResponseAsync(InteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
+            await ctx.CreateResponseAsync(DiscordInteractionResponseType.DeferredChannelMessageWithSource, new DiscordInteractionResponseBuilder()
                 .WithContent("Preparing result..."));
 
             const int COLS = 2;
@@ -311,8 +314,8 @@ namespace KoekoeBot
             }
 
 
-            var interactivity = ctx.Client.GetInteractivity();
-            var pages = interactivity.GeneratePagesInEmbed(content, DSharpPlus.Interactivity.Enums.SplitType.Line);
+            var interactivity = ctx.Client.ServiceProvider.GetRequiredService<InteractivityExtension>();
+            var pages = InteractivityExtension.GeneratePagesInEmbed(content, DSharpPlus.Interactivity.Enums.SplitType.Line);
             foreach(var page in pages)
             {
                 page.Content = $"```{page.Content}```";
@@ -335,19 +338,19 @@ namespace KoekoeBot
         {
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
-            if (vstat?.Channel == null)
+            if (vstat?.ChannelId == null)
             {
                 await ctx.CreateResponseAsync("You are not in a voice channel.");
                 return;
             }
-
+            var voiceChannel = await vstat.GetChannelAsync();
             GuildHandler handler = KoekoeController.GetGuildHandler(ctx.Client, ctx.Guild, true);
 
             SampleData sample = handler.getSample(sampleNameOrAlias);
             if (sample != null && sample.enabled)
             {
                 List<DiscordChannel> channels = new List<DiscordChannel>();
-                channels.Add(vstat.Channel);
+                channels.Add(voiceChannel);
                 handler.AnnounceSample(sampleNameOrAlias, 1, channels); //each sample has it's sample number as an alias
             }
             else
@@ -364,7 +367,7 @@ namespace KoekoeBot
             await ctx.DeferAsync();
             // get member's voice state
             var vstat = ctx.Member?.VoiceState;
-            if (vstat?.Channel == null)
+            if (vstat?.ChannelId == null)
             {
                 await ctx.CreateResponseAsync("You are not in a voice channel.");
                 return;
@@ -376,10 +379,10 @@ namespace KoekoeBot
                 ctx.Client.Logger.LogWarning($"Will not be playing {filename} (file not found)");
             }
 
-            DiscordChannel Channel = vstat.Channel;
+            DiscordChannel Channel = await vstat.GetChannelAsync();
 
             // check whether VNext is enabled
-            var vnext = ctx.Client.GetVoiceNext();
+            var vnext = ctx.Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
             if (vnext == null)
             {
                 ctx.Client.Logger.LogWarning("VoiceNext not configured");

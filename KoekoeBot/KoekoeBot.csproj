@@ -2,17 +2,23 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSharpPlus.Interactivity" Version="4.5.1" />
-    <PackageReference Include="DSharpPlus.SlashCommands" Version="4.5.1" />
+    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02574" />
+    <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02574" />
+    <PackageReference Include="DSharpPlus.CommandsNext" Version="5.0.0-nightly-02574" />
+    <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-02574" />
+    <PackageReference Include="DSharpPlus.VoiceNext" Version="5.0.0-nightly-02574" />
+    
+    <!-- Emzi0767.Common is often required by DSharpPlus v5 -->
     <PackageReference Include="Emzi0767.Common" Version="2.8.0" />
     <PackageReference Include="MP3Sharp" Version="1.0.5" />
-    <PackageReference Include="DSharpPlus" Version="4.5.1" />
-    <PackageReference Include="DSharpPlus.CommandsNext" Version="4.5.1" />
-    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.5.1" />
+    
+    <!-- Note: SlashCommands is largely integrated into the new DSharpPlus.Commands in v5, 
+         we rely on the old extension. -->
+    <PackageReference Include="DSharpPlus.SlashCommands" Version="5.0.0-nightly-02574" />
   </ItemGroup>
 
 </Project>
