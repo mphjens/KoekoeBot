@@ -62,7 +62,7 @@ namespace KoekoeBot
                 TokenType = TokenType.Bot,
                 AutoReconnect = true,
                 Intents = DiscordIntents.Guilds | DiscordIntents.GuildMessages | DiscordIntents.GuildVoiceStates,
-                MinimumLogLevel = LogLevel.Information//LogLevel.Debug,
+                MinimumLogLevel = LogLevel.Debug//LogLevel.Information//LogLevel.Debug,
             };
 
             Client = new DiscordClient(cfg);
