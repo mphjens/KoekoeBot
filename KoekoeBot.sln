@@ -1,9 +1,21 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30517.126
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11709.299 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KoekoeBot", "KoekoeBot\KoekoeBot.csproj", "{A01D3B0E-5218-4A44-A65F-36790C1349B7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSharpPlus", "DSharpPlus-Repo\DSharpPlus\DSharpPlus.csproj", "{F1330921-C15C-188C-889C-80FBDB454342}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSharpPlus.Commands", "DSharpPlus-Repo\DSharpPlus.Commands\DSharpPlus.Commands.csproj", "{8F94B6A5-931F-4233-ED9C-2D49824F2F60}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSharpPlus.Analyzers", "DSharpPlus-Repo\DSharpPlus.Analyzers\DSharpPlus.Analyzers\DSharpPlus.Analyzers.csproj", "{D04BDA5B-1DC8-1935-213A-093320F2DCD1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSharpPlus.Interactivity", "DSharpPlus-Repo\DSharpPlus.Interactivity\DSharpPlus.Interactivity.csproj", "{4EFC38E2-853C-44F2-200D-853877B51FAA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSharpPlus.CommandsNext", "DSharpPlus-Repo\DSharpPlus.CommandsNext\DSharpPlus.CommandsNext.csproj", "{C16C9527-B081-5E57-E441-A65883CA80F9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DSharpPlus.Voice", "DSharpPlus-Repo\DSharpPlus.Voice\DSharpPlus.Voice.csproj", "{BDD7871B-535F-1366-8573-BA00D841E9F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +27,30 @@ Global
 		{A01D3B0E-5218-4A44-A65F-36790C1349B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A01D3B0E-5218-4A44-A65F-36790C1349B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A01D3B0E-5218-4A44-A65F-36790C1349B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F1330921-C15C-188C-889C-80FBDB454342}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F1330921-C15C-188C-889C-80FBDB454342}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F1330921-C15C-188C-889C-80FBDB454342}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F1330921-C15C-188C-889C-80FBDB454342}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F94B6A5-931F-4233-ED9C-2D49824F2F60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F94B6A5-931F-4233-ED9C-2D49824F2F60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F94B6A5-931F-4233-ED9C-2D49824F2F60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F94B6A5-931F-4233-ED9C-2D49824F2F60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D04BDA5B-1DC8-1935-213A-093320F2DCD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D04BDA5B-1DC8-1935-213A-093320F2DCD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D04BDA5B-1DC8-1935-213A-093320F2DCD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D04BDA5B-1DC8-1935-213A-093320F2DCD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EFC38E2-853C-44F2-200D-853877B51FAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EFC38E2-853C-44F2-200D-853877B51FAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EFC38E2-853C-44F2-200D-853877B51FAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EFC38E2-853C-44F2-200D-853877B51FAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C16C9527-B081-5E57-E441-A65883CA80F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C16C9527-B081-5E57-E441-A65883CA80F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C16C9527-B081-5E57-E441-A65883CA80F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C16C9527-B081-5E57-E441-A65883CA80F9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BDD7871B-535F-1366-8573-BA00D841E9F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDD7871B-535F-1366-8573-BA00D841E9F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDD7871B-535F-1366-8573-BA00D841E9F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDD7871B-535F-1366-8573-BA00D841E9F5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

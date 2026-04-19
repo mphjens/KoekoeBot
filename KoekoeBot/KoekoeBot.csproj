@@ -1,16 +1,22 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02574" />
+    <!-- <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02574" />
     <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02574" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="5.0.0-nightly-02574" />
     <PackageReference Include="DSharpPlus.Interactivity" Version="5.0.0-nightly-02574" />
-    <PackageReference Include="DSharpPlus.VoiceNext" Version="5.0.0-nightly-02574" />
+    <PackageReference Include="DSharpPlus.VoiceNext" Version="5.0.0-nightly-02574" /> -->
+
+    <ProjectReference Include="../DSharpPlus-Repo/DSharpPlus/DSharpPlus.csproj" />
+    <ProjectReference Include="../DSharpPlus-Repo/DSharpPlus.Commands/DSharpPlus.Commands.csproj" />
+    <ProjectReference Include="../DSharpPlus-Repo/DSharpPlus.CommandsNext/DSharpPlus.CommandsNext.csproj" />
+    <ProjectReference Include="../DSharpPlus-Repo/DSharpPlus.Interactivity/DSharpPlus.Interactivity.csproj" />
+    <ProjectReference Include="../DSharpPlus-Repo/DSharpPlus.Voice/DSharpPlus.Voice.csproj" />
     
     <!-- Emzi0767.Common is often required by DSharpPlus v5 -->
     <PackageReference Include="Emzi0767.Common" Version="2.8.0" />
@@ -18,7 +24,7 @@
     
     <!-- Note: SlashCommands is largely integrated into the new DSharpPlus.Commands in v5, 
          we rely on the old extension. -->
-    <PackageReference Include="DSharpPlus.SlashCommands" Version="5.0.0-nightly-02574" />
+    <!-- <PackageReference Include="DSharpPlus.SlashCommands" Version="5.0.0-nightly-02574" /> -->
   </ItemGroup>
 
 </Project>

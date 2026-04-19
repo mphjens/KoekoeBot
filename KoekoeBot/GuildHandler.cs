@@ -1,20 +1,16 @@
 ﻿using DSharpPlus;
-using DSharpPlus.Extensions;
-using Microsoft.Extensions.DependencyInjection;
-
 using DSharpPlus.Entities;
-using DSharpPlus.VoiceNext;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Linq;
-using System.IO;
-using System.Runtime.InteropServices;
-using Newtonsoft.Json;
-using System.Threading;
+using DSharpPlus.Voice;
 using Microsoft.Extensions.Logging;
 using MP3Sharp;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Pipelines;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace KoekoeBot
 {
@@ -48,7 +44,8 @@ namespace KoekoeBot
 
         private Queue<Func<Task>> AnnounceQueue = new Queue<Func<Task>>();
 
-        private VoiceNextConnection cVoiceConnection = null;
+        private VoiceConnection cVoiceConnection = null;
+        private DiscordChannel cVoiceChanel = null;
         private DebouncedAction debouncedLeave;
         private static int LeaveAfterMs = 20000; //leave after 20seconds of inactivity
         private SavedGuildData guildData;
@@ -368,9 +365,10 @@ namespace KoekoeBot
             this.AnnounceFile(getSampleFilePath(guildSample), loopcount, channels);
         }
 
-        public async Task<VoiceNextConnection> JoinWithVoice(DiscordChannel channel)
+        public async Task<VoiceConnection> JoinWithVoice(DiscordChannel channel)
         {
-            if (cVoiceConnection != null && cVoiceConnection.TargetChannel.Id == channel.Id)
+            
+            if (cVoiceConnection != null && cVoiceChanel != null && cVoiceChanel.Id == channel.Id)
             {
                 this.logDebug("Reusing voice connection");
                 return this.cVoiceConnection;
@@ -384,45 +382,28 @@ namespace KoekoeBot
                 }
             }
 
-            // check whether VNext is enabled
+            var conn = await channel.ConnectAsync();
 
-            var vnext = Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
-            if (vnext == null)
-            {
-                this.logWarning("VoiceNext not configured");
-                return null;
-            }
+            this.cVoiceConnection = conn;
+            this.cVoiceChanel = channel;
 
-            // check whether we aren't already connected
-            var vnc = vnext.GetConnection(channel.Guild);
-            if (vnc != null)
-            {
-                this.logWarning("Already connected in this guild.");
-                return null;
-            }
+            await Task.Delay(500); // ?
 
-            // connect
-            this.logDebug("vnext.ConnectAsync");
-            vnc = await vnext.ConnectAsync(channel);
-
-            this.cVoiceConnection = vnc;
-
-            await Task.Delay(500);
-
-            return vnc;
+            return conn;
         }
 
-        public async Task Leave(VoiceNextConnection voiceConnection = null)
+        public async Task Leave(VoiceConnection voiceConnection = null)
         {
             voiceConnection = voiceConnection != null ? voiceConnection : this.cVoiceConnection;
 
             if (voiceConnection != null)
             {
-                var vnext = Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
-                await voiceConnection.SendSpeakingAsync(false);
-                vnext.GetConnection(voiceConnection.TargetChannel.Guild).Disconnect();
+                await voiceConnection.StopSpeakingAsync();
+                await voiceConnection.DisconnectAsync();
+                await voiceConnection.DisposeAsync();
 
                 this.cVoiceConnection = null;
+                this.cVoiceChanel = null;
                 this.isPlaying = false;
             } else {
                 this.logWarning("Connection = null while trying to leaving channel");
@@ -475,12 +456,15 @@ namespace KoekoeBot
                     }
                     
                     this.debouncedLeave.action();
-                    isPlaying = true;
+                    
+                    var audioWriter = this.cVoiceConnection.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
 
                     try
                     {
+                        bool isDone = false;
+
                         // wait for current playback to finish
-                        while (vnc.IsPlaying)
+                        while (isPlaying)
                         {
                             if(ct.IsCancellationRequested)
                             {
@@ -489,9 +473,12 @@ namespace KoekoeBot
                             }
                             //this.logDebug("WaitForPlaybackFinishAsync..");
                             //await vnc.WaitForPlaybackFinishAsync();
+                            await Task.Delay(50);
                         }
 
-                        await vnc.SendSpeakingAsync(true);
+                        isPlaying = true;
+
+                        await this.cVoiceConnection.StartSpeakingAsync();
                         this.logInformation($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
 
                         for (int i = 0; i < loopcount; i++)
@@ -499,15 +486,16 @@ namespace KoekoeBot
                             
                             MP3Stream stream = new MP3Stream(audio_path);
 
-                            var txStream = vnc.GetTransmitSink();
-                            await stream.CopyToAsync(txStream, 4096);
-                            await txStream.FlushAsync();
+                            await stream.CopyToAsync(audioWriter, ct);
+                            await audioWriter.FlushAsync();
 
                             // close the stream after we're done with it.
                             stream.Close();
                         }
 
-                        await Task.Delay(100);
+                        await Task.Delay(1000);
+
+                        await this.cVoiceConnection.StopSpeakingAsync();
                     }
                     catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
                     finally
@@ -515,6 +503,7 @@ namespace KoekoeBot
                         this.logInformation("finished playing sample");
                         this.debouncedLeave.action();
                         isPlaying = false;
+                        audioWriter.Complete();
                     }
 
                 }

@@ -13,7 +13,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Enums;
 using DSharpPlus.Interactivity.Extensions;
-using DSharpPlus.VoiceNext;
+using DSharpPlus.Voice;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -301,30 +301,13 @@ namespace KoekoeBot
             }
 
             DiscordChannel channel = await vstat.GetChannelAsync();
-
-            // In v5 VoiceNext is resolved via DI
-            var vnext = ctx.Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
-            if (vnext == null)
-            {
-                ctx.Client.Logger.LogWarning("VoiceNext not configured");
-                return;
-            }
-
-            var vnc = vnext.GetConnection(channel.Guild);
-            if (vnc != null)
-            {
-                ctx.Client.Logger.LogWarning("Already connected in this guild.");
-                return;
-            }
-
-            vnc = await vnext.ConnectAsync(channel);
-            while (vnc.IsPlaying)
-                await vnc.WaitForPlaybackFinishAsync();
+            var conn = await channel.ConnectAsync();
+            var writer = conn.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
 
             Exception exc = null;
             try
             {
-                await vnc.SendSpeakingAsync(true);
+                await conn.StartSpeakingAsync();
 
                 var psi = new ProcessStartInfo
                 {
@@ -339,16 +322,17 @@ namespace KoekoeBot
                 ctx.Client.Logger.LogInformation($"Will run {psi.FileName} as {psi.Arguments}");
 
                 var ffmpeg = Process.Start(psi);
-                var txStream = vnc.GetTransmitSink();
+                var txStream = writer.AsStream();
                 await ffmpeg.StandardOutput.BaseStream.CopyToAsync(txStream);
                 await txStream.FlushAsync();
-                await vnc.WaitForPlaybackFinishAsync();
+                await Task.Delay(1000); // TODO: debug
             }
             catch (Exception ex) { exc = ex; }
             finally
             {
-                await vnc.SendSpeakingAsync(false);
-                vnext.GetConnection(channel.Guild).Disconnect();
+                await conn.StopSpeakingAsync();
+                await conn.DisconnectAsync();
+                await conn.DisposeAsync();
             }
 
             if (exc != null)

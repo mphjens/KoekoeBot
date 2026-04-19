@@ -1,7 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes; // [RemainingText]
+using DSharpPlus.Entities;
+using DSharpPlus.Voice;
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -9,12 +13,6 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using DSharpPlus.CommandsNext.Attributes; // [RemainingText]
-using DSharpPlus.CommandsNext;
-
-using DSharpPlus.Entities;
-using DSharpPlus.VoiceNext;                                    // GetVoiceNext()
-using Microsoft.Extensions.Logging;
 
 namespace KoekoeBot
 {
@@ -348,32 +346,15 @@ namespace KoekoeBot
                 ctx.Client.Logger.LogWarning($"Will not be playing {filename} (file not found)");
                 return;
             }
-            
+
             DiscordChannel channel = await vstat.GetChannelAsync();
-
-            // GetVoiceNext() is an extension method from DSharpPlus.VoiceNext
-            var vnext = ctx.Client.ServiceProvider.GetRequiredService<VoiceNextExtension>();
-            if (vnext == null)
-            {
-                ctx.Client.Logger.LogWarning("VoiceNext not configured");
-                return;
-            }
-
-            var vnc = vnext.GetConnection(channel.Guild);
-            if (vnc != null)
-            {
-                ctx.Client.Logger.LogWarning("Already connected in this guild.");
-                return;
-            }
-
-            vnc = await vnext.ConnectAsync(channel);
-            while (vnc.IsPlaying)
-                await vnc.WaitForPlaybackFinishAsync();
+            var conn = await channel.ConnectAsync();
+            var writer = conn.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
 
             Exception exc = null;
             try
             {
-                await vnc.SendSpeakingAsync(true);
+                await conn.StartSpeakingAsync();
 
                 var psi = new ProcessStartInfo
                 {
@@ -388,17 +369,17 @@ namespace KoekoeBot
                 ctx.Client.Logger.LogInformation($"Will run {psi.FileName} as {psi.Arguments}");
 
                 var ffmpeg = Process.Start(psi);
-                var txStream = vnc.GetTransmitSink();
+                var txStream = writer.AsStream();
                 await ffmpeg.StandardOutput.BaseStream.CopyToAsync(txStream);
                 await txStream.FlushAsync();
-                await vnc.WaitForPlaybackFinishAsync();
+                await Task.Delay(1000); // TODO: debug
             }
             catch (Exception ex) { exc = ex; }
             finally
             {
-                await vnc.SendSpeakingAsync(false);
-                vnext.GetConnection(channel.Guild).Disconnect();
-                await ctx.RespondAsync($"Finished playing `{filename}`");
+                await conn.StopSpeakingAsync();
+                await conn.DisconnectAsync();
+                await conn.DisposeAsync();
             }
 
             if (exc != null)

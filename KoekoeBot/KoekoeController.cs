@@ -6,7 +6,7 @@ using DSharpPlus.Commands.Processors.SlashCommands;
 using DSharpPlus.Commands.Processors.TextCommands;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;                                       // SessionCreatedEventArgs etc.
-using DSharpPlus.VoiceNext;
+using DSharpPlus.Voice;
 using DSPlus.Examples;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -103,8 +103,8 @@ namespace KoekoeBot
                 Timeout = TimeSpan.FromMinutes(2),
             });
 
-            // VoiceNext requires a config object in v5
-            builder.UseVoiceNext(new VoiceNextConfiguration());
+            
+            builder.UseVoice();
             // ConnectAsync on the builder builds + connects in one step
             Client = builder.Build();
             await Client.ConnectAsync();
