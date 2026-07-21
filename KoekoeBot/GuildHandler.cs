@@ -477,7 +477,7 @@ namespace KoekoeBot
                             var txStream = writer.AsStream();
                             await stream.CopyToAsync(txStream, 4096);
                             await txStream.FlushAsync();
-                            writer.SignalCompletion();
+                            writer.SignalSilence();
 
                             // close the stream after we're done with it.
                             stream.Close();
