@@ -1,0 +1,4 @@
+[submodule "DSharpPlus-Repo"]
+	path = DSharpPlus-Repo
+	url = https://github.com/DSharpPlus/DSharpPlus.git
+	branch = voice-rewrite

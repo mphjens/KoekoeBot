@@ -3,7 +3,7 @@
 # samples (mp3) can be placed in volume/samples/{guild id}/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.1-bionic
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 WORKDIR /app
 # Our ci pipeline places the build in the ./out directory
@@ -14,8 +14,9 @@ RUN apt-get install -yq tzdata && \
     ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
-# we need ffmpeg to play the audio samples, libopus and libsodium for discord voice
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libopus-dev libsodium-dev 
+# we need ffmpeg to play the audio samples; libopus/libsodium are no longer
+# needed here, DSharpPlus.Voice ships its own native binaries via NuGet
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
 
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 

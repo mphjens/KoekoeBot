@@ -1,9 +1,14 @@
 ﻿using DSharpPlus;
-using DSharpPlus.CommandsNext;
-using DSharpPlus.CommandsNext.Exceptions;
+using DSharpPlus.Clients;
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.Exceptions;
+using DSharpPlus.Commands.Processors.SlashCommands;
+using DSharpPlus.Commands.Processors.TextCommands;
+using DSharpPlus.Commands.Processors.TextCommands.Parsing;
+using DSharpPlus.Commands.Trees;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using DSharpPlus.VoiceNext;
+using DSharpPlus.Voice;
 using DSPlus.Examples;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -14,7 +19,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using SimpleWebSocketServerLibrary;
-using DSharpPlus.SlashCommands;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Enums;
 using DSharpPlus.Interactivity.Extensions;
@@ -32,13 +36,12 @@ namespace KoekoeBot
 
     class KoekoeController
     {
-        public static readonly EventId BotEventId = new EventId(42, "KoekoeBot"); //??   
+        public static readonly EventId BotEventId = new EventId(42, "KoekoeBot"); //??
         public static DiscordClient Client { get; set; }
-        public static CommandsNextExtension Commands { get; set; }
-        public static VoiceNextExtension Voice { get; set; }
+        public static CommandsExtension Commands { get; set; }
 
         //Guild id -> GuildHandler
-        static Dictionary<ulong, GuildHandler> _instances;     
+        static Dictionary<ulong, GuildHandler> _instances;
 
         public static async Task RunBot()
         {
@@ -56,58 +59,56 @@ namespace KoekoeBot
                 json = await sr.ReadToEndAsync();
 
             var cfgjson = JsonConvert.DeserializeObject<ConfigJson>(json);
-            var cfg = new DiscordConfiguration
-            {
-                Token = cfgjson.Token,
-                TokenType = TokenType.Bot,
-                AutoReconnect = true,
-                Intents = DiscordIntents.Guilds | DiscordIntents.GuildMessages | DiscordIntents.GuildVoiceStates,
-                MinimumLogLevel = LogLevel.Information//LogLevel.Debug,
-            };
 
-            Client = new DiscordClient(cfg);
+            DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault
+            (
+                cfgjson.Token,
+                DiscordIntents.Guilds | DiscordIntents.GuildMessages | DiscordIntents.GuildVoiceStates
+                    | TextCommandProcessor.RequiredIntents | SlashCommandProcessor.RequiredIntents
+            );
 
-            Client.Ready += Client_Ready;
-            Client.GuildAvailable += Client_GuildAvailable;
-            Client.GuildDeleted += Client_GuildDeleted;
-            Client.ClientErrored += Client_ClientError;
+            builder.SetLogLevel(LogLevel.Information);
+            builder.SetReconnectOnFatalGatewayErrors();
 
-            var ccfg = new CommandsNextConfiguration
-            {
-                // let's use the string prefix defined in config.json
-                StringPrefixes = new[] { cfgjson.CommandPrefix },
+            builder.ConfigureEventHandlers(b => b
+                .HandleSessionCreated(Client_SessionCreated)
+                .HandleGuildAvailable(Client_GuildAvailable)
+                .HandleGuildDeleted(Client_GuildDeleted));
 
-                // enable responding in direct messages
-                EnableDms = true,
-
-                // enable mentioning the bot as a command prefix
-                EnableMentionPrefix = true,
-            };
-            Commands = Client.UseCommandsNext(ccfg);
-            var interactivity = Client.UseInteractivity(new InteractivityConfiguration
+            builder.UseInteractivity(new InteractivityConfiguration
             {
                 PaginationBehaviour = PaginationBehaviour.WrapAround,
                 Timeout = TimeSpan.FromMinutes(2),
             });
-            var slash = Client.UseSlashCommands();
 
+            builder.UseVoice();
 
-            Commands.CommandExecuted += Commands_CommandExecuted;
-            Commands.CommandErrored += Commands_CommandErrored;
+            builder.UseCommands((sp, ext) =>
+            {
+                Commands = ext;
 
-            Commands.RegisterCommands<KoekoeCommands>();
-            slash.RegisterCommands<KoekoeSlashCommands>();
+                ext.AddCommands([typeof(KoekoeCommands)]);
 
+                ext.AddProcessor(new TextCommandProcessor(new()
+                {
+                    PrefixResolver = new DefaultPrefixResolver(true, cfgjson.CommandPrefix).ResolvePrefixAsync,
+                }));
 
+                ext.CommandExecuted += Commands_CommandExecuted;
+                ext.CommandErrored += Commands_CommandErrored;
+            }, new CommandsConfiguration
+            {
+                RegisterDefaultCommandProcessors = true,
+            });
 
-            Voice = Client.UseVoiceNext();
+            Client = builder.Build();
 
             await Client.ConnectAsync();
 
             await Task.Delay(-1); //Prevent premature quitting, TODO: find a nice way to gracefully exit
         }
 
-        private static Task Client_Ready(DiscordClient sender, ReadyEventArgs e)
+        private static Task Client_SessionCreated(DiscordClient sender, SessionCreatedEventArgs e)
         {
             // let's log the fact that this event occured
             sender.Logger.LogInformation(BotEventId, "Client is ready to process events.");
@@ -118,23 +119,10 @@ namespace KoekoeBot
             return Task.CompletedTask;
         }
 
-
-        private static Task Client_ClientError(DiscordClient sender, ClientErrorEventArgs e)
-        {
-            // let's log the details of the error that just 
-            // occured in our client
-            sender.Logger.LogError(BotEventId, e.Exception, "Exception occured");
-
-            // since this method is not async, let's return
-            // a completed task, so that no additional work
-            // is done
-            return Task.CompletedTask;
-        }
-
-        private static Task Commands_CommandExecuted(CommandsNextExtension sender, CommandExecutionEventArgs e)
+        private static Task Commands_CommandExecuted(CommandsExtension sender, DSharpPlus.Commands.EventArgs.CommandExecutedEventArgs e)
         {
             // let's log the name of the command and user
-            e.Context.Client.Logger.LogInformation(BotEventId, $"{e.Context.User.Username} successfully executed '{e.Command.QualifiedName}'");
+            e.Context.Client.Logger.LogInformation(BotEventId, $"{e.Context.User.Username} successfully executed '{e.Context.Command.FullName}'");
 
             // since this method is not async, let's return
             // a completed task, so that no additional work
@@ -142,16 +130,16 @@ namespace KoekoeBot
             return Task.CompletedTask;
         }
 
-        private static async Task Commands_CommandErrored(CommandsNextExtension sender, CommandErrorEventArgs e)
+        private static async Task Commands_CommandErrored(CommandsExtension sender, DSharpPlus.Commands.EventArgs.CommandErroredEventArgs e)
         {
             // let's log the error details
-            e.Context.Client.Logger.LogError(BotEventId, $"{e.Context.User.Username} tried executing '{e.Command?.QualifiedName ?? "<unknown command>"}' but it errored: {e.Exception.GetType()}: {e.Exception.Message ?? "<no message>"}", DateTime.Now);
+            e.Context.Client.Logger.LogError(BotEventId, $"{e.Context.User.Username} tried executing '{e.Context.Command?.FullName ?? "<unknown command>"}' but it errored: {e.Exception.GetType()}: {e.Exception.Message ?? "<no message>"}", DateTime.Now);
 
             // let's check if the error is a result of lack
             // of required permissions
             if (e.Exception is ChecksFailedException ex)
             {
-                // yes, the user lacks required permissions, 
+                // yes, the user lacks required permissions,
                 // let them know
 
                 var emoji = DiscordEmoji.FromName(e.Context.Client, ":no_entry:");
@@ -166,7 +154,7 @@ namespace KoekoeBot
                 await e.Context.RespondAsync(embed);
             }
         }
-        private static Task Client_GuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
+        private static Task Client_GuildAvailable(DiscordClient sender, GuildAvailableEventArgs e)
         {
             if(KoekoeController._instances.ContainsKey(e.Guild.Id) && KoekoeController._instances[e.Guild.Id].IsRunning) {
                 KoekoeController._instances[e.Guild.Id].Stop();
@@ -185,7 +173,7 @@ namespace KoekoeBot
             return Task.CompletedTask;
         }
 
-         private static Task Client_GuildDeleted(DiscordClient sender, GuildDeleteEventArgs e)
+         private static Task Client_GuildDeleted(DiscordClient sender, GuildDeletedEventArgs e)
         {
             Client.Logger.LogInformation($"{e.Guild.Name} removed, stopping guildhandler");
             if(KoekoeController._instances.ContainsKey(e.Guild.Id) && KoekoeController._instances[e.Guild.Id].IsRunning) {
@@ -269,7 +257,7 @@ namespace KoekoeBot
         }
 
         //Hooked up in program.cs
-        public static Task StartupGuildHandler(DiscordClient sender, GuildCreateEventArgs e)
+        public static Task StartupGuildHandler(DiscordClient sender, GuildAvailableEventArgs e)
         {
             // let's log the name of the guild that was just
             // sent to our client

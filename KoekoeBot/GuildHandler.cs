@@ -1,6 +1,6 @@
 ﻿using DSharpPlus;
 using DSharpPlus.Entities;
-using DSharpPlus.VoiceNext;
+using DSharpPlus.Voice;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -45,7 +45,8 @@ namespace KoekoeBot
 
         private Queue<Func<Task>> AnnounceQueue = new Queue<Func<Task>>();
 
-        private VoiceNextConnection cVoiceConnection = null;
+        private VoiceConnection cVoiceConnection = null;
+        private ulong? cVoiceChannelId = null;
         private DebouncedAction debouncedLeave;
         private static int LeaveAfterMs = 20000; //leave after 20seconds of inactivity
         private SavedGuildData guildData;
@@ -365,9 +366,9 @@ namespace KoekoeBot
             this.AnnounceFile(getSampleFilePath(guildSample), loopcount, channels);
         }
 
-        public async Task<VoiceNextConnection> JoinWithVoice(DiscordChannel channel)
+        public async Task<VoiceConnection> JoinWithVoice(DiscordChannel channel)
         {
-            if (cVoiceConnection != null && cVoiceConnection.TargetChannel.Id == channel.Id)
+            if (cVoiceConnection != null && cVoiceChannelId == channel.Id)
             {
                 this.logDebug("Reusing voice connection");
                 return this.cVoiceConnection;
@@ -381,44 +382,28 @@ namespace KoekoeBot
                 }
             }
 
-            // check whether VNext is enabled
-            var vnext = Client.GetVoiceNext();
-            if (vnext == null)
-            {
-                this.logWarning("VoiceNext not configured");
-                return null;
-            }
-
-            // check whether we aren't already connected
-            var vnc = vnext.GetConnection(channel.Guild);
-            if (vnc != null)
-            {
-                this.logWarning("Already connected in this guild.");
-                return null;
-            }
-
             // connect
-            this.logDebug("vnext.ConnectAsync");
-            vnc = await vnext.ConnectAsync(channel);
+            this.logDebug("channel.ConnectAsync");
+            VoiceConnection vnc = await channel.ConnectAsync();
 
             this.cVoiceConnection = vnc;
+            this.cVoiceChannelId = channel.Id;
 
             await Task.Delay(500);
 
             return vnc;
         }
 
-        public async Task Leave(VoiceNextConnection voiceConnection = null)
+        public async Task Leave(VoiceConnection voiceConnection = null)
         {
             voiceConnection = voiceConnection != null ? voiceConnection : this.cVoiceConnection;
 
             if (voiceConnection != null)
             {
-                var vnext = Client.GetVoiceNext();
-                await voiceConnection.SendSpeakingAsync(false);
-                vnext.GetConnection(voiceConnection.TargetChannel.Guild).Disconnect();
+                await voiceConnection.DisposeAsync();
 
                 this.cVoiceConnection = null;
+                this.cVoiceChannelId = null;
                 this.isPlaying = false;
             } else {
                 this.logWarning("Connection = null while trying to leaving channel");
@@ -475,29 +460,24 @@ namespace KoekoeBot
 
                     try
                     {
-                        // wait for current playback to finish
-                        while (vnc.IsPlaying)
+                        if (ct.IsCancellationRequested)
                         {
-                            if(ct.IsCancellationRequested)
-                            {
-                                await this.Leave();
-                                return;
-                            }
-                            //this.logDebug("WaitForPlaybackFinishAsync..");
-                            //await vnc.WaitForPlaybackFinishAsync();
+                            await this.Leave();
+                            return;
                         }
 
-                        await vnc.SendSpeakingAsync(true);
                         this.logInformation($"Playing {audio_path} in {channel.Guild.Name}/{channel.Name}");
 
                         for (int i = 0; i < loopcount; i++)
                         {
-                            
+
                             MP3Stream stream = new MP3Stream(audio_path);
 
-                            var txStream = vnc.GetTransmitSink();
+                            AudioWriter writer = vnc.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
+                            var txStream = writer.AsStream();
                             await stream.CopyToAsync(txStream, 4096);
                             await txStream.FlushAsync();
+                            writer.SignalCompletion();
 
                             // close the stream after we're done with it.
                             stream.Close();
