@@ -4,15 +4,17 @@
 
 # Build runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+ENV TZ=Europe/Amsterdam
 
 WORKDIR /app
 # Our ci pipeline places the build in the ./out directory
 COPY ./dist .
-RUN DEBIAN_FRONTEND=noninteractive apt-get update
+# RUN DEBIAN_FRONTEND=noninteractive apt-get update
 
-RUN apt-get install -yq tzdata && \
-    ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata
+# RUN apt-get install -yq tzdata && \
+#     ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime && \
+#     dpkg-reconfigure -f noninteractive tzdata
+
 
 # we need ffmpeg to play the audio samples; libopus/libsodium are no longer
 # needed here, DSharpPlus.Voice ships its own native binaries via NuGet
