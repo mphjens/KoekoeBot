@@ -16,7 +16,7 @@ RUN apt-get install -yq tzdata && \
 
 # we need ffmpeg to play the audio samples; libopus/libsodium are no longer
 # needed here, DSharpPlus.Voice ships its own native binaries via NuGet
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
+#RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
 
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 

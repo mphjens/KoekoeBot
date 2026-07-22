@@ -485,7 +485,11 @@ namespace KoekoeBot
 
                         await Task.Delay(100);
                     }
-                    catch (Exception ex) { Console.Write(ex.StackTrace); this.Leave(); }
+                    catch (Exception ex)
+                    {
+                        this.logWarning($"Exception while playing {audio_path} in {channel.Guild.Name}/{channel.Name}: {ex}");
+                        await this.Leave();
+                    }
                     finally
                     {
                         this.logInformation("finished playing sample");
