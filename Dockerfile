@@ -6,19 +6,15 @@
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 ENV TZ=Europe/Amsterdam
 
+# DSharpPlus.Voice checks for OpenSSL 3.x at startup via a plain "libcrypto"
+# P/Invoke. libcrypto.so.3 is already present (the aspnet image depends on
+# libssl3 for .NET's own crypto), just missing the unversioned symlink
+# (normally provided by libssl-dev, which we don't want to install here).
+RUN ln -sf "$(find /usr/lib -name 'libcrypto.so.3' | head -n1)" /usr/lib/libcrypto.so
+
 WORKDIR /app
-# Our ci pipeline places the build in the ./out directory
+# Our ci pipeline places the build in the ./dist directory
 COPY ./dist .
-# RUN DEBIAN_FRONTEND=noninteractive apt-get update
-
-# RUN apt-get install -yq tzdata && \
-#     ln -fs /usr/share/zoneinfo/Europe/Amsterdam /etc/localtime && \
-#     dpkg-reconfigure -f noninteractive tzdata
-
-
-# we need ffmpeg to play the audio samples; libopus/libsodium are no longer
-# needed here, DSharpPlus.Voice ships its own native binaries via NuGet
-#RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ffmpeg
 
 ENTRYPOINT ["dotnet", "KoekoeBot.dll"]
 
