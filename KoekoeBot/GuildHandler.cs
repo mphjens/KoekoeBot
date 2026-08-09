@@ -527,6 +527,12 @@ namespace KoekoeBot
             byte[] pcmData = pcm.ToArray();
             int sourceRate = stream.Frequency;
 
+            if (pcmData.Length == 0)
+            {
+                this.logWarning($"Decoded 0 bytes of audio from {audio_path} - file may not be valid MPEG audio (wrong container/extension?)");
+                return pcmData;
+            }
+
             if (sourceRate <= 0 || sourceRate == 48000)
                 return pcmData;
 
