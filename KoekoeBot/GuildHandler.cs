@@ -437,6 +437,8 @@ namespace KoekoeBot
                     return;
                 }
 
+                byte[] pcmData = this.DecodeMp3ToPcm48kStereo(audio_path);
+
                 CancellationToken ct = announceTaskCS.Token;
 
                 foreach (DiscordChannel channel in channels)
@@ -470,17 +472,11 @@ namespace KoekoeBot
 
                         for (int i = 0; i < loopcount; i++)
                         {
-
-                            MP3Stream stream = new MP3Stream(audio_path);
-
                             AudioWriter writer = vnc.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
                             var txStream = writer.AsStream();
-                            await stream.CopyToAsync(txStream, 4096);
+                            await txStream.WriteAsync(pcmData, 0, pcmData.Length);
                             await txStream.FlushAsync();
                             writer.SignalSilence();
-
-                            // close the stream after we're done with it.
-                            stream.Close();
                         }
 
                         await Task.Delay(100);
@@ -501,6 +497,77 @@ namespace KoekoeBot
             };
         
             this.AnnounceQueue.Enqueue(nAnnounceTask); // In Execute a background task was kicked off to work off this queue..
+        }
+
+        // MP3Sharp decodes at the file's native sample rate, not 48kHz, so anything not
+        // already encoded at 48kHz needs resampling or it plays back pitched ("chipmunk").
+        // Decoding is also wrapped in a catch: MP3Sharp can throw on a truncated/malformed
+        // trailing frame (seen with trimmed clips); we just use whatever decoded before that.
+        private byte[] DecodeMp3ToPcm48kStereo(string audio_path)
+        {
+            MP3Stream stream = new MP3Stream(audio_path);
+            using var pcm = new MemoryStream();
+
+            try
+            {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = stream.Read(buf, 0, buf.Length)) > 0)
+                    pcm.Write(buf, 0, n);
+            }
+            catch (Exception ex)
+            {
+                this.logWarning($"MP3 decode of {audio_path} stopped early (corrupt/truncated frame): {ex.Message}");
+            }
+            finally
+            {
+                stream.Close();
+            }
+
+            byte[] pcmData = pcm.ToArray();
+            int sourceRate = stream.Frequency;
+
+            if (sourceRate <= 0 || sourceRate == 48000)
+                return pcmData;
+
+            return ResamplePcm16Stereo(pcmData, sourceRate, 48000);
+        }
+
+        // Linear-interpolation resample of 16-bit interleaved stereo PCM.
+        private static byte[] ResamplePcm16Stereo(byte[] input, int sourceRate, int targetRate)
+        {
+            const int bytesPerFrame = 4; // 2 channels * 16-bit
+            int inFrames = input.Length / bytesPerFrame;
+            if (inFrames == 0)
+                return Array.Empty<byte>();
+
+            int outFrames = (int)((long)inFrames * targetRate / sourceRate);
+            byte[] output = new byte[outFrames * bytesPerFrame];
+
+            double step = (double)sourceRate / targetRate;
+            double srcPos = 0;
+
+            for (int i = 0; i < outFrames; i++)
+            {
+                int idx0 = (int)srcPos;
+                int idx1 = Math.Min(idx0 + 1, inFrames - 1);
+                double frac = srcPos - idx0;
+
+                for (int ch = 0; ch < 2; ch++)
+                {
+                    short s0 = BitConverter.ToInt16(input, (idx0 * 2 + ch) * 2);
+                    short s1 = BitConverter.ToInt16(input, (idx1 * 2 + ch) * 2);
+                    short outSample = (short)(s0 + (s1 - s0) * frac);
+
+                    int outOffset = (i * 2 + ch) * 2;
+                    output[outOffset] = (byte)(outSample & 0xff);
+                    output[outOffset + 1] = (byte)(outSample >> 8);
+                }
+
+                srcPos += step;
+            }
+
+            return output;
         }
 
         public void AddChannel(DiscordChannel channel, bool autosave = true)
