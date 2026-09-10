@@ -68,7 +68,6 @@ namespace KoekoeBot
             );
 
             builder.SetLogLevel(LogLevel.Information);
-            builder.SetReconnectOnFatalGatewayErrors();
 
             builder.ConfigureEventHandlers(b => b
                 .HandleSessionCreated(Client_SessionCreated)
