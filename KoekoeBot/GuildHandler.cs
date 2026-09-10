@@ -259,9 +259,18 @@ namespace KoekoeBot
                 if(queue.Any()){
                     var cTask = queue.Dequeue();
                     if(cTask != null){
-                        await cTask();
+                        // An escaping exception would end this loop and silently stop all
+                        // further announcements for this guild until the bot is restarted.
+                        try
+                        {
+                            await cTask();
+                        }
+                        catch (Exception ex)
+                        {
+                            this.logWarning($"Announcement task threw: {ex}");
+                        }
                     }
-                        
+
                 }
 
                 if(!indefinite) {
@@ -448,8 +457,18 @@ namespace KoekoeBot
                         this.logWarning($"Will not be playing {audio_path} in {channel.Guild.Name}/{channel.Name} (no users online)");
                         continue; //skip empty channels
                     }
-                    var vnc = await JoinWithVoice(channel);
-                    
+                    VoiceConnection vnc;
+                    try
+                    {
+                        vnc = await JoinWithVoice(channel);
+                    }
+                    catch (Exception ex)
+                    {
+                        this.logWarning($"Failed to join {channel.Guild.Name}/{channel.Name}: {ex}");
+                        this.cVoiceConnection = null;
+                        this.cVoiceChannelId = null;
+                        continue;
+                    }
 
                     if (vnc == null)
                     {
