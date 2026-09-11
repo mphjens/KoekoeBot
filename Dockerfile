@@ -3,7 +3,10 @@
 # samples (mp3) can be placed in volume/samples/{guild id}/
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# DSharpPlus.Natives.Opus ships a libopus.so built against glibc 2.43 (it needs
+# sqrtf@GLIBC_2.43), so it cannot load on the default aspnet:10.0 image, which is
+# Ubuntu 24.04 with glibc 2.39. resolute is Ubuntu 26.04 with glibc 2.43.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-resolute
 ENV TZ=Europe/Amsterdam
 
 # DSharpPlus.Voice checks for OpenSSL 3.x at startup via a plain "libcrypto"
