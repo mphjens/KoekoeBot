@@ -67,7 +67,7 @@ namespace KoekoeBot
                     | TextCommandProcessor.RequiredIntents | SlashCommandProcessor.RequiredIntents
             );
 
-            builder.SetLogLevel(LogLevel.Information);
+            builder.SetLogLevel(Enum.TryParse(cfgjson.LogLevel, true, out LogLevel configuredLogLevel) ? configuredLogLevel : LogLevel.Information);
 
             builder.ConfigureEventHandlers(b => b
                 .HandleSessionCreated(Client_SessionCreated)
@@ -81,6 +81,12 @@ namespace KoekoeBot
             });
 
             builder.UseVoice();
+
+            // The default connection repository throws for the rest of the process lifetime if a
+            // guild still has a registered connection. A VoiceConnection registers itself before it
+            // finishes connecting, so a single failed join leaks a registration that nothing can
+            // clear, and the guild can never be joined again. This repository takes over the stale
+            // connection instead of throwing.
             builder.EnableSeamlessVoiceReconnecting();
 
             builder.UseCommands((sp, ext) =>

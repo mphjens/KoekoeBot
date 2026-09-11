@@ -55,5 +55,10 @@ namespace DSPlus.Examples
 
         [JsonProperty("prefix")]
         public string CommandPrefix { get; private set; }
+
+        // Any Microsoft.Extensions.Logging.LogLevel name, defaults to Information when absent.
+        // Debug surfaces the voice handshake logging of DSharpPlus.Voice.
+        [JsonProperty("loglevel")]
+        public string LogLevel { get; private set; }
     }
 }

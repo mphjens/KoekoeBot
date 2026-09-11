@@ -10,6 +10,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using System.Threading;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MP3Sharp;
 
@@ -49,6 +50,10 @@ namespace KoekoeBot
         private ulong? cVoiceChannelId = null;
         private DebouncedAction debouncedLeave;
         private static int LeaveAfterMs = 20000; //leave after 20seconds of inactivity
+        // Several steps of the voice handshake (waiting for VOICE_SERVER_UPDATE, the DAVE/MLS
+        // exchange, UDP ip discovery) can stall without ever throwing, which leaves the announce
+        // queue blocked forever and produces no log output at all. Cap the whole join instead.
+        private static readonly TimeSpan JoinTimeout = TimeSpan.FromSeconds(30);
         private SavedGuildData guildData;
 
         List<AlarmData> alarms;
@@ -67,7 +72,16 @@ namespace KoekoeBot
 
             Action leaveAction = async () =>
             {
-                await this.Leave();
+                // This runs as async void on a timer thread, an escaping exception would take
+                // the process down.
+                try
+                {
+                    await this.Leave();
+                }
+                catch (Exception ex)
+                {
+                    this.logWarning($"Failed to leave the voice channel: {ex}");
+                }
             };
             this.debouncedLeave = leaveAction.Debounce(GuildHandler.LeaveAfterMs);
 
@@ -391,16 +405,73 @@ namespace KoekoeBot
                 }
             }
 
-            // connect
-            this.logDebug("channel.ConnectAsync");
-            VoiceConnection vnc = await channel.ConnectAsync();
+            this.logInformation($"Connecting to {channel.Guild.Name}/{channel.Name}");
+
+            VoiceConnection vnc;
+            try
+            {
+                vnc = await channel.ConnectAsync().WaitAsync(JoinTimeout);
+            }
+            catch (Exception ex)
+            {
+                this.logWarning($"Connecting to {channel.Guild.Name}/{channel.Name} failed: {ex}");
+                await DropRegisteredConnection();
+                throw;
+            }
+
+            // Discord can sever the connection on its own (kick, channel deleted, session
+            // invalidated). Without this we would keep handing out a dead connection here.
+            vnc.SetDisconnectHandler(OnVoiceDisconnected, vnc);
 
             this.cVoiceConnection = vnc;
             this.cVoiceChannelId = channel.Id;
 
+            this.logInformation($"Connected to {channel.Guild.Name}/{channel.Name}");
+
             await Task.Delay(500);
 
             return vnc;
+        }
+
+        private Task OnVoiceDisconnected(VoiceDisconnectReason reason, object connection)
+        {
+            this.logWarning($"Voice connection for {this.Guild.Name} was closed: {reason}");
+
+            if (ReferenceEquals(this.cVoiceConnection, connection))
+            {
+                this.cVoiceConnection = null;
+                this.cVoiceChannelId = null;
+                this.isPlaying = false;
+            }
+
+            return Task.CompletedTask;
+        }
+
+        // Disposes whatever connection the voice extension still has registered for this guild.
+        // Without this a failed join leaves a registration behind that makes every following
+        // join fail with "a connection to this guild already exists".
+        private async Task DropRegisteredConnection()
+        {
+            this.cVoiceConnection = null;
+            this.cVoiceChannelId = null;
+            this.isPlaying = false;
+
+            IVoiceConnectionRepository repository = this.Client.ServiceProvider.GetService<IVoiceConnectionRepository>();
+            if (repository == null || !repository.Connections.TryGetValue(this.Guild.Id, out VoiceConnection registered))
+            {
+                return;
+            }
+
+            this.logWarning($"Dropping the voice connection still registered for {this.Guild.Name}");
+
+            try
+            {
+                await registered.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                this.logWarning($"Failed to drop the registered voice connection: {ex.Message}");
+            }
         }
 
         public async Task Leave(VoiceConnection voiceConnection = null)
@@ -409,11 +480,16 @@ namespace KoekoeBot
 
             if (voiceConnection != null)
             {
-                await voiceConnection.DisposeAsync();
-
-                this.cVoiceConnection = null;
-                this.cVoiceChannelId = null;
-                this.isPlaying = false;
+                try
+                {
+                    await voiceConnection.DisposeAsync();
+                }
+                finally
+                {
+                    this.cVoiceConnection = null;
+                    this.cVoiceChannelId = null;
+                    this.isPlaying = false;
+                }
             } else {
                 this.logWarning("Connection = null while trying to leaving channel");
             }
@@ -431,6 +507,8 @@ namespace KoekoeBot
             }
 
             Func<Task> nAnnounceTask = async () => {
+                this.logInformation($"Announcing {audio_path}");
+
                 if(this.isPlaying)
                 {
                     this.logWarning("WARNING: Already playing, ya done goofed..");
@@ -462,12 +540,9 @@ namespace KoekoeBot
                     {
                         vnc = await JoinWithVoice(channel);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        this.logWarning($"Failed to join {channel.Guild.Name}/{channel.Name}: {ex}");
-                        this.cVoiceConnection = null;
-                        this.cVoiceChannelId = null;
-                        continue;
+                        continue; // JoinWithVoice already logged and cleaned up
                     }
 
                     if (vnc == null)
